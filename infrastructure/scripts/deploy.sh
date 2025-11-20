@@ -1,0 +1,64 @@
+#!/bin/bash
+# Deployment script for AI-Avangard on temrjan.com
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+echo "🚀 Deploying AI-Avangard to temrjan.com..."
+
+# 1. Create log directory
+echo "📁 Creating log directory..."
+sudo mkdir -p /var/log/ai-avangard
+sudo chown temrjan:temrjan /var/log/ai-avangard
+
+# 2. Stop existing services
+echo "🛑 Stopping existing processes..."
+lsof -ti:8000 | xargs kill -9 2>/dev/null || echo "No process on port 8000"
+lsof -ti:5173 | xargs kill -9 2>/dev/null || echo "No process on port 5173"
+
+# 3. Install systemd service
+echo "⚙️  Installing systemd service..."
+sudo cp "$PROJECT_ROOT/infrastructure/systemd/ai-avangard-backend.service" \
+    /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable ai-avangard-backend
+sudo systemctl restart ai-avangard-backend
+
+# Wait for backend to start
+echo "⏳ Waiting for backend to start..."
+sleep 3
+
+# Check if backend is running
+if sudo systemctl is-active --quiet ai-avangard-backend; then
+    echo "✅ Backend service started successfully"
+else
+    echo "❌ Backend service failed to start"
+    sudo systemctl status ai-avangard-backend
+    exit 1
+fi
+
+# 4. Install Nginx configuration
+echo "🌐 Installing Nginx configuration..."
+sudo cp "$PROJECT_ROOT/infrastructure/nginx/ai-avangard.conf" \
+    /etc/nginx/sites-available/ai-avangard.conf
+sudo ln -sf /etc/nginx/sites-available/ai-avangard.conf \
+    /etc/nginx/sites-enabled/ai-avangard.conf
+
+# Test nginx configuration
+sudo nginx -t
+
+# Reload nginx
+sudo systemctl reload nginx
+
+echo "✅ Deployment completed!"
+echo ""
+echo "📊 Service Status:"
+sudo systemctl status ai-avangard-backend --no-pager -l
+echo ""
+echo "🌍 Application is now available at:"
+echo "   HTTP: http://temrjan.com"
+echo ""
+echo "🔒 To enable HTTPS, run:"
+echo "   sudo certbot --nginx -d temrjan.com -d www.temrjan.com"

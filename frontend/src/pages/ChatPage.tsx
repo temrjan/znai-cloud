@@ -1,50 +1,63 @@
 /**
- * Chat page for RAG queries
+ * Chat page for RAG queries - Redesigned in GitHub Copilot style
  */
-import { useState, useEffect, useRef } from "react";
-import { TextInput, Button, Flash, Text } from "@primer/react";
-import { PaperAirplaneIcon } from "@primer/octicons-react";
-import { AppLayout } from "../components/layout/AppLayout";
-import { chatApi } from "../services/api";
-import { ChatMessage } from "../types";
+import { useState, useEffect, useRef } from 'react';
+import { Box } from '../components/common/Box';
+import { useTheme } from '../contexts/ThemeContext';
+import { useIsMobile, useIsDesktop } from '../hooks/useMediaQuery';
+import { colors } from '../styles/theme';
+import { chatApi } from '../services/api';
+import type { ChatMessage as ChatMessageType } from '../types';
+
+// Layout components
+import { TopBar } from '../components/layout/TopBar';
+import { MobileSidebar } from '../components/layout/MobileSidebar';
+import { Sidebar } from '../components/layout/Sidebar';
+
+// Chat components
+import { ChatMessage, LoadingMessage } from '../components/chat/ChatMessage';
+import { ChatInput } from '../components/chat/ChatInput';
+import { MessageActions } from '../components/chat/MessageActions';
 
 export function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
+  const { theme } = useTheme();
+  const themeColors = colors[theme];
+  const isMobile = useIsMobile();
+  const isDesktop = useIsDesktop();
+
+  const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSend = async (input: string) => {
     if (!input.trim() || loading) return;
 
-    const userMessage: ChatMessage = {
+    const userMessage: ChatMessageType = {
       id: Date.now().toString(),
-      role: "user",
+      role: 'user',
       content: input,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput("");
     setLoading(true);
-    setError("");
 
     try {
       const response = await chatApi.query(input);
 
-      const assistantMessage: ChatMessage = {
+      const assistantMessage: ChatMessageType = {
         id: (Date.now() + 1).toString(),
-        role: "assistant",
+        role: 'assistant',
         content: response.answer,
         timestamp: new Date(),
         sources: response.sources,
@@ -52,135 +65,164 @@ export function ChatPage() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || "Failed to get response. Please try again.";
-      setError(errorMsg);
+      const errorMessage: ChatMessageType = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Error: ${err.response?.data?.detail || 'Failed to get response. Please try again.'}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+  };
+
   return (
-    <AppLayout>
-      <div
-        style={{
-          height: "calc(100vh - 64px)",
-          display: "flex",
-          flexDirection: "column",
-          maxWidth: "900px",
-          margin: "0 auto",
-          padding: "1rem",
+    <Box
+      sx={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: themeColors.bg.primary,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Mobile: TopBar */}
+      {isMobile && (
+        <TopBar
+          onMenuClick={() => setMobileMenuOpen(true)}
+          title="AI-Avangard"
+        />
+      )}
+
+      {/* Mobile: Sidebar overlay */}
+      {isMobile && (
+        <MobileSidebar
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Desktop: Fixed Sidebar */}
+      {isDesktop && <Sidebar />}
+
+      {/* Main chat area */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          marginLeft: isDesktop ? '240px' : 0,
+          height: isMobile ? 'calc(100vh - 56px)' : '100vh',
+          position: 'relative',
         }}
       >
-        <div style={{ marginBottom: "1rem" }}>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-            Chat with your knowledge base
-          </h1>
-          <Text as="p" style={{ color: "#57606a", fontSize: "0.875rem" }}>
-            Ask questions about your uploaded documents
-          </Text>
-        </div>
-
-        {error && (
-          <Flash variant="danger" style={{ marginBottom: "1rem" }}>
-            {error}
-          </Flash>
-        )}
-
-        <div
-          style={{
+        {/* Messages area */}
+        <Box
+          sx={{
             flex: 1,
-            overflowY: "auto",
-            backgroundColor: "white",
-            borderRadius: "6px",
-            border: "1px solid #d0d7de",
-            padding: "1rem",
-            marginBottom: "1rem",
+            overflowY: 'auto',
+            padding: isMobile ? '16px' : '24px 32px',
+            paddingBottom: '24px',
           }}
         >
           {messages.length === 0 ? (
-            <div
-              style={{
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#8b949e",
-                textAlign: "center",
+            // Empty state
+            <Box
+              sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
               }}
             >
-              <div>
-                <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-                  Start a conversation
-                </p>
-                <p style={{ fontSize: "0.875rem" }}>
-                  Upload documents first, then ask questions about them
-                </p>
-              </div>
-            </div>
+              <Box
+                sx={{
+                  fontSize: isMobile ? '20px' : '28px',
+                  fontWeight: 600,
+                  color: themeColors.text.primary,
+                  marginBottom: '8px',
+                }}
+              >
+                Good {getTimeOfDay()}, {getUserFirstName()}!
+              </Box>
+              <Box
+                sx={{
+                  fontSize: isMobile ? '14px' : '16px',
+                  color: themeColors.text.secondary,
+                }}
+              >
+                Ask questions about your uploaded documents
+              </Box>
+            </Box>
           ) : (
-            <>
+            // Messages
+            <Box
+              sx={{
+                maxWidth: '900px',
+                margin: '0 auto',
+                width: '100%',
+              }}
+            >
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  style={{
-                    marginBottom: "1rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: message.role === "user" ? "flex-end" : "flex-start",
-                  }}
-                >
-                  <div
-                    style={{
-                      maxWidth: "80%",
-                      padding: "0.75rem 1rem",
-                      borderRadius: "6px",
-                      backgroundColor: message.role === "user" ? "#0969da" : "#f6f8fa",
-                      color: message.role === "user" ? "white" : "#24292f",
-                    }}
-                  >
-                    <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{message.content}</p>
-                    {message.sources && message.sources.length > 0 && (
-                      <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", opacity: 0.8 }}>
-                        Sources: {message.sources.join(", ")}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#8b949e",
-                      marginTop: "0.25rem",
-                    }}
-                  >
-                    {new Date(message.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </>
-          )}
-        </div>
+                <Box key={message.id}>
+                  <ChatMessage message={message} />
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.5rem" }}>
-          <TextInput
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about your documents..."
-            size="large"
-            disabled={loading}
-            style={{ flex: 1 }}
+                  {/* Actions for assistant messages */}
+                  {message.role === 'assistant' && (
+                    <MessageActions
+                      onCopy={() => handleCopy(message.content)}
+                      onLike={() => console.log('Like')}
+                      onDislike={() => console.log('Dislike')}
+                      onRefresh={() => console.log('Refresh')}
+                    />
+                  )}
+                </Box>
+              ))}
+
+              {/* Loading indicator */}
+              {loading && <LoadingMessage />}
+
+              <div ref={messagesEndRef} />
+            </Box>
+          )}
+        </Box>
+
+        {/* Input area */}
+        <Box
+          sx={{
+            padding: isMobile ? '16px' : '24px 0',
+            paddingBottom: isMobile ? 'calc(16px + env(safe-area-inset-bottom))' : '32px',
+          }}
+        >
+          <ChatInput
+            onSend={handleSend}
+            loading={loading}
+            placeholder="Ask anything"
           />
-          <Button
-            type="submit"
-            variant="primary"
-            size="large"
-            disabled={loading || !input.trim()}
-            leadingVisual={PaperAirplaneIcon}
-          >
-            {loading ? "Sending..." : "Send"}
-          </Button>
-        </form>
-      </div>
-    </AppLayout>
+        </Box>
+      </Box>
+
+    </Box>
   );
+}
+
+// Helper functions
+function getTimeOfDay(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 18) return 'afternoon';
+  return 'evening';
+}
+
+function getUserFirstName(): string {
+  // Mock - replace with actual user data
+  return 'User';
 }

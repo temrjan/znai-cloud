@@ -75,16 +75,18 @@ async def chat_query(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful assistant that answers questions based on the provided context. "
-                               "Only use information from the context. If the answer is not in the context, say so."
+                    "content": "Ты - помощник, который отвечает на вопросы на основе предоставленного контекста. "
+                               "Давай подробные, развёрнутые ответы, используя всю доступную информацию из контекста. "
+                               "Если в контексте есть номера сур и аятов (например [2:3]), обязательно включай их в ответ. "
+                               "Используй только информацию из контекста. Если ответа нет в контексте, так и скажи."
                 },
                 {
                     "role": "user",
-                    "content": f"Context:\n{context}\n\nQuestion: {request.question}"
+                    "content": f"Контекст:\n{context}\n\nВопрос: {request.question}"
                 }
             ],
             temperature=0.5,
-            max_tokens=1000,
+            max_tokens=2500,
         )
 
         answer = response.choices[0].message.content

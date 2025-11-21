@@ -15,9 +15,10 @@ export enum UserRole {
 }
 
 export enum DocumentStatus {
-  PROCESSING = "processing",
-  INDEXED = "indexed",
-  FAILED = "failed",
+  PROCESSING = "processing",  // Uploaded, waiting for indexing
+  INDEXING = "indexing",      // Currently being indexed
+  INDEXED = "indexed",        // Successfully indexed
+  FAILED = "failed",          // Indexing failed
 }
 
 export interface User {

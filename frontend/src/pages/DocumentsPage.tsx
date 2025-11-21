@@ -1,39 +1,51 @@
 /**
- * Documents management page
+ * Documents page - GitHub Copilot style
  */
-import { useState, useEffect } from "react";
-import { Button, Flash, Text, IconButton } from "@primer/react";
-import { UploadIcon, TrashIcon, FileIcon } from "@primer/octicons-react";
-import { AppLayout } from "../components/layout/AppLayout";
-import { documentsApi, quotaApi } from "../services/api";
-import { Document, UserQuota, DocumentStatus } from "../types";
+import { useState, useEffect } from 'react';
+import { Box } from '../components/common/Box';
+import { useTheme } from '../contexts/ThemeContext';
+import { useIsMobile, useIsDesktop } from '../hooks/useMediaQuery';
+import { colors } from '../styles/theme';
+import { documentsApi, quotaApi } from '../services/api';
+import { Document, UserQuota, DocumentStatus } from '../types';
+import {
+  UploadIcon,
+  TrashIcon,
+  FileIcon,
+  CheckIcon,
+  XIcon,
+  SyncIcon,
+} from '@primer/octicons-react';
+
+// Layout components
+import { TopBar } from '../components/layout/TopBar';
+import { MobileSidebar } from '../components/layout/MobileSidebar';
+import { Sidebar } from '../components/layout/Sidebar';
 
 export function DocumentsPage() {
+  const { theme } = useTheme();
+  const themeColors = colors[theme];
+  const isMobile = useIsMobile();
+  const isDesktop = useIsDesktop();
+
   const [documents, setDocuments] = useState<Document[]>([]);
   const [quota, setQuota] = useState<UserQuota | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // Auto-clear error and success messages after 5 seconds
+  // Auto-clear error after 5 seconds
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(""), 5000);
+      const timer = setTimeout(() => setError(''), 5000);
       return () => clearTimeout(timer);
     }
   }, [error]);
-
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(""), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
 
   const loadData = async () => {
     try {
@@ -44,7 +56,7 @@ export function DocumentsPage() {
       setDocuments(docs);
       setQuota(quotaData);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to load documents");
+      setError(err.response?.data?.detail || 'Failed to load documents');
     } finally {
       setLoading(false);
     }
@@ -60,18 +72,25 @@ export function DocumentsPage() {
     }
 
     setUploading(true);
-    setError("");
-    setSuccess("");
+    setError('');
 
     try {
       await documentsApi.upload(file);
-      setSuccess(`"${file.name}" uploaded successfully`);
       await loadData();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to upload document");
+      setError(err.response?.data?.detail || 'Failed to upload document');
     } finally {
       setUploading(false);
-      e.target.value = "";
+      e.target.value = '';
+    }
+  };
+
+  const handleIndex = async (id: string) => {
+    try {
+      await documentsApi.index(id);
+      await loadData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to index document');
     }
   };
 
@@ -80,208 +99,359 @@ export function DocumentsPage() {
 
     try {
       await documentsApi.delete(id);
-      setSuccess(`"${filename}" deleted successfully`);
       await loadData();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to delete document");
-    }
-  };
-
-  const handleIndex = async (id: string, filename: string) => {
-    try {
-      setSuccess(`Indexing "${filename}"...`);
-      await documentsApi.index(id);
-      setSuccess(`"${filename}" indexed successfully`);
-      await loadData();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to index document");
-    }
-  };
-
-  const getStatusColor = (status: DocumentStatus) => {
-    switch (status) {
-      case DocumentStatus.INDEXED:
-        return "#1a7f37";
-      case DocumentStatus.PROCESSING:
-        return "#bf8700";
-      case DocumentStatus.FAILED:
-        return "#cf222e";
-      default:
-        return "#8b949e";
+      setError(err.response?.data?.detail || 'Failed to delete document');
     }
   };
 
   return (
-    <AppLayout>
-      <div
-        style={{
-          maxWidth: "900px",
-          margin: "0 auto",
-          padding: "1.5rem",
+    <Box
+      sx={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: themeColors.bg.primary,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Mobile: TopBar */}
+      {isMobile && (
+        <TopBar
+          onMenuClick={() => setMobileMenuOpen(true)}
+          title="Documents"
+        />
+      )}
+
+      {/* Mobile: Sidebar overlay */}
+      {isMobile && (
+        <MobileSidebar
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Desktop: Fixed Sidebar */}
+      {isDesktop && <Sidebar />}
+
+      {/* Main content area */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          marginLeft: isDesktop ? '240px' : 0,
+          height: isMobile ? 'calc(100vh - 56px)' : '100vh',
+          overflowY: 'auto',
         }}
       >
-        <div style={{ marginBottom: "1.5rem" }}>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-            Documents
-          </h1>
-          {quota && (
-            <Text as="p" style={{ color: "#57606a", fontSize: "0.875rem" }}>
-              {quota.current_documents} of {quota.max_documents} documents used
-            </Text>
-          )}
-        </div>
-
-        {error && (
-          <Flash variant="danger" style={{ marginBottom: "1rem" }}>
-            {error}
-          </Flash>
-        )}
-
-        {success && (
-          <Flash variant="success" style={{ marginBottom: "1rem" }}>
-            {success}
-          </Flash>
-        )}
-
-        <div
-          style={{
-            backgroundColor: "white",
-            borderRadius: "6px",
-            border: "1px solid #d0d7de",
-            padding: "1.5rem",
-            marginBottom: "1.5rem",
+        <Box
+          sx={{
+            maxWidth: '900px',
+            width: '100%',
+            margin: '0 auto',
+            padding: isMobile ? '16px' : '32px 24px',
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          {/* Header */}
+          <Box sx={{ marginBottom: '24px' }}>
+            <Box
+              sx={{
+                fontSize: isMobile ? '24px' : '28px',
+                fontWeight: 600,
+                color: themeColors.text.primary,
+                marginBottom: '8px',
+              }}
+            >
+              Documents
+            </Box>
+            {quota && (
+              <Box
+                sx={{
+                  fontSize: '14px',
+                  color: themeColors.text.secondary,
+                }}
+              >
+                {quota.current_documents} of {quota.max_documents} documents used
+              </Box>
+            )}
+          </Box>
+
+          {/* Error message */}
+          {error && (
+            <Box
+              sx={{
+                padding: '12px 16px',
+                backgroundColor: themeColors.accent.red,
+                color: '#ffffff',
+                borderRadius: '6px',
+                fontSize: '14px',
+                marginBottom: '16px',
+              }}
+            >
+              {error}
+            </Box>
+          )}
+
+          {/* Upload section */}
+          <Box
+            sx={{
+              padding: '16px',
+              backgroundColor: themeColors.bg.secondary,
+              border: `1px solid ${themeColors.border.primary}`,
+              borderRadius: '8px',
+              marginBottom: '24px',
+            }}
+          >
             <input
               type="file"
               id="file-upload"
               onChange={handleFileUpload}
               disabled={uploading || (quota?.current_documents ?? 0) >= (quota?.max_documents ?? 5)}
               accept=".pdf,.doc,.docx,.txt,.md"
-              style={{ display: "none" }}
+              style={{ display: 'none' }}
             />
-            <Button
-              as="label"
-              htmlFor="file-upload"
-              variant="primary"
-              leadingVisual={UploadIcon}
-              disabled={uploading || (quota?.current_documents ?? 0) >= (quota?.max_documents ?? 5)}
-            >
-              {uploading ? "Uploading..." : "Upload Document"}
-            </Button>
-            <Text as="span" style={{ color: "#57606a", fontSize: "0.875rem" }}>
-              Supported: PDF, DOC, DOCX, TXT, MD
-            </Text>
-          </div>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "2rem", color: "#8b949e" }}>
-            Loading documents...
-          </div>
-        ) : documents.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "6px",
-              border: "1px solid #d0d7de",
-              padding: "3rem",
-              textAlign: "center",
-              color: "#8b949e",
-            }}
-          >
-            <div style={{ marginBottom: "1rem" }}>
-              <FileIcon size={48} />
-            </div>
-            <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-              No documents yet
-            </p>
-            <p style={{ fontSize: "0.875rem" }}>
-              Upload your first document to get started
-            </p>
-          </div>
-        ) : (
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "6px",
-              border: "1px solid #d0d7de",
-              overflow: "hidden",
-            }}
-          >
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                style={{
-                  padding: "1rem",
-                  borderBottom: "1px solid #d0d7de",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "1rem",
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <Box
+                as="label"
+                htmlFor="file-upload"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: uploading || (quota?.current_documents ?? 0) >= (quota?.max_documents ?? 5)
+                    ? themeColors.bg.tertiary
+                    : themeColors.accent.blueGradient,
+                  color: '#ffffff',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: uploading || (quota?.current_documents ?? 0) >= (quota?.max_documents ?? 5)
+                    ? 'not-allowed'
+                    : 'pointer',
+                  opacity: uploading || (quota?.current_documents ?? 0) >= (quota?.max_documents ?? 5) ? 0.6 : 1,
+                  '&:hover': uploading || (quota?.current_documents ?? 0) >= (quota?.max_documents ?? 5)
+                    ? {}
+                    : { opacity: 0.9 },
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <FileIcon size={16} />
-                    <Text
-                      as="span"
-                      style={{
-                        fontWeight: "600",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {doc.filename}
-                    </Text>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.25rem" }}>
-                    <Text as="span" style={{ fontSize: "0.75rem", color: "#57606a" }}>
-                      {(doc.file_size / 1024).toFixed(1)} KB
-                    </Text>
-                    <Text
-                      as="span"
-                      style={{
-                        fontSize: "0.75rem",
-                        color: getStatusColor(doc.status),
-                        fontWeight: "500",
-                      }}
-                    >
-                      {doc.status}
-                    </Text>
-                    <Text as="span" style={{ fontSize: "0.75rem", color: "#8b949e" }}>
-                      {new Date(doc.uploaded_at).toLocaleDateString()}
-                    </Text>
-                  </div>
-                  {doc.error_message && (
-                    <Text as="p" style={{ fontSize: "0.75rem", color: "#cf222e", marginTop: "0.25rem" }}>
-                      Error: {doc.error_message}
-                    </Text>
-                  )}
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {doc.status === DocumentStatus.PROCESSING && (
-                    <Button
-                      size="small"
-                      onClick={() => handleIndex(doc.id, doc.filename)}
-                    >
-                      Index
-                    </Button>
-                  )}
-                  <IconButton
-                    aria-label="Delete document"
-                    icon={TrashIcon}
-                    variant="danger"
-                    onClick={() => handleDelete(doc.id, doc.filename)}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+                <UploadIcon size={16} />
+                {uploading ? 'Uploading...' : 'Upload Document'}
+              </Box>
+              <Box sx={{ fontSize: '12px', color: themeColors.text.secondary }}>
+                Supported: PDF, DOC, DOCX, TXT, MD
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Documents list */}
+          {loading ? (
+            <Box
+              sx={{
+                textAlign: 'center',
+                padding: '48px',
+                color: themeColors.text.secondary,
+                fontSize: '14px',
+              }}
+            >
+              Loading documents...
+            </Box>
+          ) : documents.length === 0 ? (
+            <Box
+              sx={{
+                padding: '48px',
+                textAlign: 'center',
+                backgroundColor: themeColors.bg.secondary,
+                border: `1px solid ${themeColors.border.primary}`,
+                borderRadius: '8px',
+              }}
+            >
+              <Box sx={{ marginBottom: '16px', color: themeColors.text.secondary }}>
+                <FileIcon size={48} />
+              </Box>
+              <Box
+                sx={{
+                  fontSize: '18px',
+                  fontWeight: 500,
+                  color: themeColors.text.primary,
+                  marginBottom: '8px',
+                }}
+              >
+                No documents yet
+              </Box>
+              <Box sx={{ fontSize: '14px', color: themeColors.text.secondary }}>
+                Upload your first document to get started
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {documents.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  document={doc}
+                  onIndex={handleIndex}
+                  onDelete={handleDelete}
+                  themeColors={themeColors}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// Document card component
+interface DocumentCardProps {
+  document: Document;
+  onIndex: (id: string) => void;
+  onDelete: (id: string, filename: string) => void;
+  themeColors: (typeof colors)['dark'] | (typeof colors)['light'];
+}
+
+function DocumentCard({ document: doc, onIndex, onDelete, themeColors }: DocumentCardProps) {
+  const getStatusDisplay = () => {
+    switch (doc.status) {
+      case DocumentStatus.PROCESSING:
+        return {
+          icon: <FileIcon size={16} />,
+          text: 'Ready to index',
+          color: themeColors.text.secondary,
+        };
+      case DocumentStatus.INDEXING:
+        return {
+          icon: <SyncIcon size={16} />,
+          text: 'Indexing...',
+          color: themeColors.accent.orange,
+        };
+      case DocumentStatus.INDEXED:
+        return {
+          icon: <CheckIcon size={16} />,
+          text: 'Indexed',
+          color: themeColors.accent.green,
+        };
+      case DocumentStatus.FAILED:
+        return {
+          icon: <XIcon size={16} />,
+          text: 'Failed',
+          color: themeColors.accent.red,
+        };
+    }
+  };
+
+  const status = getStatusDisplay();
+
+  return (
+    <Box
+      sx={{
+        padding: '16px',
+        backgroundColor: themeColors.bg.secondary,
+        border: `1px solid ${themeColors.border.primary}`,
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '16px',
+      }}
+    >
+      {/* Left: File info */}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <FileIcon size={16} />
+          <Box
+            sx={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: themeColors.text.primary,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {doc.filename}
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px' }}>
+          <Box sx={{ color: themeColors.text.tertiary }}>
+            {(doc.file_size / 1024).toFixed(1)} KB
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', color: status.color }}>
+            {status.icon}
+            {status.text}
+          </Box>
+          <Box sx={{ color: themeColors.text.tertiary }}>
+            {new Date(doc.uploaded_at).toLocaleDateString()}
+          </Box>
+        </Box>
+        {doc.error_message && (
+          <Box
+            sx={{
+              marginTop: '4px',
+              fontSize: '12px',
+              color: themeColors.accent.red,
+            }}
+          >
+            Error: {doc.error_message}
+          </Box>
         )}
-      </div>
-    </AppLayout>
+      </Box>
+
+      {/* Right: Actions */}
+      <Box sx={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+        {/* Index button - show only for PROCESSING or FAILED */}
+        {(doc.status === DocumentStatus.PROCESSING || doc.status === DocumentStatus.FAILED) && (
+          <Box
+            as="button"
+            onClick={() => onIndex(doc.id)}
+            sx={{
+              padding: '6px 12px',
+              background: themeColors.accent.blueGradient,
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              '&:hover': {
+                opacity: 0.9,
+              },
+            }}
+          >
+            <SyncIcon size={14} />
+            {doc.status === DocumentStatus.FAILED ? 'Retry' : 'Index'}
+          </Box>
+        )}
+
+        {/* Delete button */}
+        <Box
+          as="button"
+          onClick={() => onDelete(doc.id, doc.filename)}
+          sx={{
+            padding: '6px',
+            backgroundColor: 'transparent',
+            color: themeColors.text.secondary,
+            border: `1px solid ${themeColors.border.primary}`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            '&:hover': {
+              backgroundColor: themeColors.accent.red,
+              borderColor: themeColors.accent.red,
+              color: '#ffffff',
+            },
+          }}
+          aria-label="Delete document"
+        >
+          <TrashIcon size={14} />
+        </Box>
+      </Box>
+    </Box>
   );
 }

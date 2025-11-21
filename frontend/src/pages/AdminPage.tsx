@@ -1,41 +1,64 @@
 /**
- * Admin page for user approval
+ * Admin page - GitHub Copilot style
  */
-import { useState, useEffect } from "react";
-import { Button, Flash, Text } from "@primer/react";
-import { CheckIcon, XIcon, PersonIcon } from "@primer/octicons-react";
-import { AppLayout } from "../components/layout/AppLayout";
-import { adminApi } from "../services/api";
-import { User } from "../types";
+import { useState, useEffect } from 'react';
+import { Box } from '../components/common/Box';
+import { useTheme } from '../contexts/ThemeContext';
+import { useIsMobile, useIsDesktop } from '../hooks/useMediaQuery';
+import { colors } from '../styles/theme';
+import { adminApi } from '../services/api';
+import { User } from '../types';
+import {
+  CheckIcon,
+  XIcon,
+  PersonIcon,
+} from '@primer/octicons-react';
+
+// Layout components
+import { TopBar } from '../components/layout/TopBar';
+import { MobileSidebar } from '../components/layout/MobileSidebar';
+import { Sidebar } from '../components/layout/Sidebar';
 
 export function AdminPage() {
+  const { theme } = useTheme();
+  const themeColors = colors[theme];
+  const isMobile = useIsMobile();
+  const isDesktop = useIsDesktop();
+
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadPendingUsers();
   }, []);
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const loadPendingUsers = async () => {
     try {
       const users = await adminApi.getPendingUsers();
       setPendingUsers(users);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to load pending users");
+      setError(err.response?.data?.detail || 'Failed to load pending users');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (userId: string, email: string) => {
+  const handleApprove = async (userId: string) => {
     try {
       await adminApi.approveUser(userId);
-      setSuccess(`User ${email} approved successfully`);
       setPendingUsers(pendingUsers.filter((u) => u.id !== userId));
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to approve user");
+      setError(err.response?.data?.detail || 'Failed to approve user');
     }
   };
 
@@ -44,125 +67,269 @@ export function AdminPage() {
 
     try {
       await adminApi.rejectUser(userId);
-      setSuccess(`User ${email} rejected`);
       setPendingUsers(pendingUsers.filter((u) => u.id !== userId));
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to reject user");
+      setError(err.response?.data?.detail || 'Failed to reject user');
     }
   };
 
   return (
-    <AppLayout>
-      <div
-        style={{
-          maxWidth: "900px",
-          margin: "0 auto",
-          padding: "1.5rem",
+    <Box
+      sx={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: themeColors.bg.primary,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Mobile: TopBar */}
+      {isMobile && (
+        <TopBar
+          onMenuClick={() => setMobileMenuOpen(true)}
+          title="Admin"
+        />
+      )}
+
+      {/* Mobile: Sidebar overlay */}
+      {isMobile && (
+        <MobileSidebar
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Desktop: Fixed Sidebar */}
+      {isDesktop && <Sidebar />}
+
+      {/* Main content area */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          marginLeft: isDesktop ? '240px' : 0,
+          height: isMobile ? 'calc(100vh - 56px)' : '100vh',
+          overflowY: 'auto',
         }}
       >
-        <div style={{ marginBottom: "1.5rem" }}>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-            User Management
-          </h1>
-          <Text as="p" style={{ color: "#57606a", fontSize: "0.875rem" }}>
-            Approve or reject pending user registrations
-          </Text>
-        </div>
+        <Box
+          sx={{
+            maxWidth: '900px',
+            width: '100%',
+            margin: '0 auto',
+            padding: isMobile ? '16px' : '32px 24px',
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ marginBottom: '24px' }}>
+            <Box
+              sx={{
+                fontSize: isMobile ? '24px' : '28px',
+                fontWeight: 600,
+                color: themeColors.text.primary,
+                marginBottom: '8px',
+              }}
+            >
+              User Approvals
+            </Box>
+            <Box
+              sx={{
+                fontSize: '14px',
+                color: themeColors.text.secondary,
+              }}
+            >
+              {pendingUsers.length === 0
+                ? 'No pending registrations'
+                : `${pendingUsers.length} user${pendingUsers.length === 1 ? '' : 's'} waiting for approval`}
+            </Box>
+          </Box>
 
-        {error && (
-          <Flash variant="danger" style={{ marginBottom: "1rem" }}>
-            {error}
-          </Flash>
-        )}
+          {/* Error message */}
+          {error && (
+            <Box
+              sx={{
+                padding: '12px 16px',
+                backgroundColor: themeColors.accent.red,
+                color: '#ffffff',
+                borderRadius: '6px',
+                fontSize: '14px',
+                marginBottom: '16px',
+              }}
+            >
+              {error}
+            </Box>
+          )}
 
-        {success && (
-          <Flash variant="success" style={{ marginBottom: "1rem" }}>
-            {success}
-          </Flash>
-        )}
-
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "2rem", color: "#8b949e" }}>
-            Loading pending users...
-          </div>
-        ) : pendingUsers.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "6px",
-              border: "1px solid #d0d7de",
-              padding: "3rem",
-              textAlign: "center",
-              color: "#8b949e",
-            }}
-          >
-            <div style={{ marginBottom: "1rem" }}>
-              <PersonIcon size={48} />
-            </div>
-            <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-              No pending approvals
-            </p>
-            <p style={{ fontSize: "0.875rem" }}>
-              All user registrations have been processed
-            </p>
-          </div>
-        ) : (
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "6px",
-              border: "1px solid #d0d7de",
-              overflow: "hidden",
-            }}
-          >
-            {pendingUsers.map((user) => (
-              <div
-                key={user.id}
-                style={{
-                  padding: "1.5rem",
-                  borderBottom: "1px solid #d0d7de",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "1rem",
-                  flexWrap: "wrap",
+          {/* Users list */}
+          {loading ? (
+            <Box
+              sx={{
+                textAlign: 'center',
+                padding: '48px',
+                color: themeColors.text.secondary,
+                fontSize: '14px',
+              }}
+            >
+              Loading pending users...
+            </Box>
+          ) : pendingUsers.length === 0 ? (
+            <Box
+              sx={{
+                padding: '48px',
+                textAlign: 'center',
+                backgroundColor: themeColors.bg.secondary,
+                border: `1px solid ${themeColors.border.primary}`,
+                borderRadius: '8px',
+              }}
+            >
+              <Box sx={{ marginBottom: '16px', color: themeColors.text.secondary }}>
+                <PersonIcon size={48} />
+              </Box>
+              <Box
+                sx={{
+                  fontSize: '18px',
+                  fontWeight: 500,
+                  color: themeColors.text.primary,
+                  marginBottom: '8px',
                 }}
               >
-                <div style={{ flex: 1, minWidth: "200px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                    <PersonIcon size={16} />
-                    <Text as="span" style={{ fontWeight: "600" }}>
-                      {user.full_name}
-                    </Text>
-                  </div>
-                  <Text as="p" style={{ fontSize: "0.875rem", color: "#57606a", marginBottom: "0.25rem" }}>
-                    {user.email}
-                  </Text>
-                  <Text as="p" style={{ fontSize: "0.75rem", color: "#8b949e" }}>
-                    Registered: {new Date(user.created_at).toLocaleString()}
-                  </Text>
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <Button
-                    variant="primary"
-                    leadingVisual={CheckIcon}
-                    onClick={() => handleApprove(user.id, user.email)}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    variant="danger"
-                    leadingVisual={XIcon}
-                    onClick={() => handleReject(user.id, user.email)}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </AppLayout>
+                No pending approvals
+              </Box>
+              <Box sx={{ fontSize: '14px', color: themeColors.text.secondary }}>
+                All user registrations have been processed
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {pendingUsers.map((user) => (
+                <UserCard
+                  key={user.id}
+                  user={user}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  themeColors={themeColors}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// User card component
+interface UserCardProps {
+  user: User;
+  onApprove: (userId: string) => void;
+  onReject: (userId: string, email: string) => void;
+  themeColors: (typeof colors)['dark'] | (typeof colors)['light'];
+}
+
+function UserCard({ user, onApprove, onReject, themeColors }: UserCardProps) {
+  return (
+    <Box
+      sx={{
+        padding: '16px',
+        backgroundColor: themeColors.bg.secondary,
+        border: `1px solid ${themeColors.border.primary}`,
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '16px',
+        flexWrap: 'wrap',
+      }}
+    >
+      {/* Left: User info */}
+      <Box sx={{ flex: 1, minWidth: '200px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <PersonIcon size={16} />
+          <Box
+            sx={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: themeColors.text.primary,
+            }}
+          >
+            {user.full_name}
+          </Box>
+        </Box>
+        <Box
+          sx={{
+            fontSize: '13px',
+            color: themeColors.text.secondary,
+            marginBottom: '4px',
+          }}
+        >
+          {user.email}
+        </Box>
+        <Box
+          sx={{
+            fontSize: '12px',
+            color: themeColors.text.tertiary,
+          }}
+        >
+          Registered: {new Date(user.created_at).toLocaleString()}
+        </Box>
+      </Box>
+
+      {/* Right: Actions */}
+      <Box sx={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+        {/* Approve button */}
+        <Box
+          as="button"
+          onClick={() => onApprove(user.id)}
+          sx={{
+            padding: '8px 16px',
+            backgroundColor: themeColors.accent.green,
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            '&:hover': {
+              opacity: 0.9,
+            },
+          }}
+        >
+          <CheckIcon size={14} />
+          Approve
+        </Box>
+
+        {/* Reject button */}
+        <Box
+          as="button"
+          onClick={() => onReject(user.id, user.email)}
+          sx={{
+            padding: '8px 16px',
+            backgroundColor: 'transparent',
+            color: themeColors.text.secondary,
+            border: `1px solid ${themeColors.border.primary}`,
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            '&:hover': {
+              backgroundColor: themeColors.accent.red,
+              borderColor: themeColors.accent.red,
+              color: '#ffffff',
+            },
+          }}
+        >
+          <XIcon size={14} />
+          Reject
+        </Box>
+      </Box>
+    </Box>
   );
 }

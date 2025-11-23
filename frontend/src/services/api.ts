@@ -123,13 +123,41 @@ export const quotaApi = {
 export const chatApi = {
   query: async (
     question: string,
-    searchScope: "all" | "organization" | "private" = "all"
-  ): Promise<{ answer: string; sources: string[] }> => {
-    const response = await api.post<{ answer: string; sources: string[] }>("/chat", {
+    searchScope: "all" | "organization" | "private" = "all",
+    sessionId?: number
+  ): Promise<{ answer: string; sources: string[]; session_id: number }> => {
+    const response = await api.post<{ answer: string; sources: string[]; session_id: number }>("/chat", {
       question,
       search_scope: searchScope,
+      session_id: sessionId,
     });
     return response.data;
+  },
+};
+
+export const chatSessionsApi = {
+  list: async (): Promise<import('../types').ChatSessionListResponse> => {
+    const response = await api.get<import('../types').ChatSessionListResponse>("/chat-sessions");
+    return response.data;
+  },
+
+  get: async (sessionId: number): Promise<import('../types').ChatSessionWithMessages> => {
+    const response = await api.get<import('../types').ChatSessionWithMessages>(`/chat-sessions/${sessionId}`);
+    return response.data;
+  },
+
+  create: async (title?: string): Promise<import('../types').ChatSession> => {
+    const response = await api.post<import('../types').ChatSession>("/chat-sessions", { title });
+    return response.data;
+  },
+
+  update: async (sessionId: number, title: string): Promise<import('../types').ChatSession> => {
+    const response = await api.patch<import('../types').ChatSession>(`/chat-sessions/${sessionId}`, { title });
+    return response.data;
+  },
+
+  delete: async (sessionId: number): Promise<void> => {
+    await api.delete(`/chat-sessions/${sessionId}`);
   },
 };
 

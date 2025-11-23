@@ -1,5 +1,5 @@
 /**
- * Mobile Sidebar - Overlay menu
+ * Mobile Sidebar - Overlay menu with chat history
  * Slides in from left, 80vw width (max 320px)
  */
 import { useEffect, useState } from 'react';
@@ -12,24 +12,39 @@ import {
   MoonIcon,
   FileIcon,
   ShieldLockIcon,
+  PlusIcon,
+  TrashIcon,
 } from '@primer/octicons-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { colors } from '../../styles/theme';
-import { authApi, adminApi } from '../../services/api';
-import { UserRole } from '../../types';
+import { authApi, adminApi, chatSessionsApi } from '../../services/api';
+import { UserRole, ChatSession } from '../../types';
 
 interface MobileSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  activeSessionId?: number;
+  onSessionSelect?: (sessionId: number) => void;
+  onNewChat?: () => void;
+  refreshTrigger?: number;
 }
 
-export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
+export function MobileSidebar({
+  isOpen,
+  onClose,
+  activeSessionId,
+  onSessionSelect,
+  onNewChat,
+  refreshTrigger
+}: MobileSidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const themeColors = colors[theme];
   const navigate = useNavigate();
   const location = useLocation();
   const user = authApi.getCurrentUser();
   const [pendingCount, setPendingCount] = useState(0);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   // Load pending users count for admins
   useEffect(() => {
@@ -45,6 +60,48 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       loadPendingCount();
     }
   }, [user, isOpen]);
+
+  // Load chat sessions
+  useEffect(() => {
+    if (isOpen && location.pathname === '/chat') {
+      loadSessions();
+    }
+  }, [isOpen, refreshTrigger, location.pathname]);
+
+  const loadSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      const response = await chatSessionsApi.list();
+      setSessions(response.sessions);
+    } catch (err) {
+      console.error('Failed to load chat sessions:', err);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: number) => {
+    e.stopPropagation();
+    try {
+      await chatSessionsApi.delete(sessionId);
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (activeSessionId === sessionId) {
+        onNewChat?.();
+      }
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+    }
+  };
+
+  const handleSessionClick = (sessionId: number) => {
+    onSessionSelect?.(sessionId);
+    onClose();
+  };
+
+  const handleNewChat = () => {
+    onNewChat?.();
+    onClose();
+  };
 
   // Close on Escape key
   useEffect(() => {
@@ -187,6 +244,146 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             />
           )}
         </Box>
+
+        {/* Chat history (only on chat page) */}
+        {location.pathname === '/chat' && (
+          <Box
+            sx={{
+              padding: '8px',
+              paddingTop: 0,
+              borderTop: `1px solid ${themeColors.border.primary}`,
+              marginTop: '8px',
+            }}
+          >
+            {/* New chat button */}
+            <Box
+              as="button"
+              onClick={handleNewChat}
+              sx={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                marginTop: '8px',
+                background: 'linear-gradient(135deg, #1B3554 0%, #80AAD3 100%)',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 500,
+              }}
+            >
+              <PlusIcon size={16} />
+              Новый чат
+            </Box>
+
+            {/* Chat history header */}
+            <Box
+              sx={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: themeColors.text.tertiary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                padding: '12px 12px 8px',
+              }}
+            >
+              История чатов
+            </Box>
+
+            {/* Sessions list */}
+            <Box
+              sx={{
+                maxHeight: '200px',
+                overflowY: 'auto',
+              }}
+            >
+              {loadingSessions ? (
+                <Box
+                  sx={{
+                    padding: '12px',
+                    fontSize: '13px',
+                    color: themeColors.text.tertiary,
+                    textAlign: 'center',
+                  }}
+                >
+                  Загрузка...
+                </Box>
+              ) : sessions.length === 0 ? (
+                <Box
+                  sx={{
+                    padding: '12px',
+                    fontSize: '13px',
+                    color: themeColors.text.tertiary,
+                    textAlign: 'center',
+                  }}
+                >
+                  Нет истории чатов
+                </Box>
+              ) : (
+                sessions.map((session) => (
+                  <Box
+                    key={session.id}
+                    as="button"
+                    onClick={() => handleSessionClick(session.id)}
+                    sx={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      backgroundColor: activeSessionId === session.id
+                        ? themeColors.bg.secondary
+                        : 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      color: themeColors.text.primary,
+                      fontSize: '13px',
+                      textAlign: 'left',
+                      '&:hover': {
+                        backgroundColor: themeColors.bg.secondary,
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        flex: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {session.title}
+                    </Box>
+                    <Box
+                      as="button"
+                      onClick={(e: React.MouseEvent) => handleDeleteSession(e, session.id)}
+                      sx={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: '4px',
+                        cursor: 'pointer',
+                        color: themeColors.text.tertiary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        '&:hover': {
+                          color: themeColors.accent.red,
+                        },
+                      }}
+                    >
+                      <TrashIcon size={14} />
+                    </Box>
+                  </Box>
+                ))
+              )}
+            </Box>
+          </Box>
+        )}
 
         {/* Footer */}
         <Box

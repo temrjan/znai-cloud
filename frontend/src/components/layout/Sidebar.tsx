@@ -12,19 +12,30 @@ import {
   ShieldLockIcon,
   SunIcon,
   MoonIcon,
+  TrashIcon,
 } from '@primer/octicons-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { colors } from '../../styles/theme';
-import { authApi, adminApi } from '../../services/api';
-import { UserRole } from '../../types';
+import { authApi, adminApi, chatSessionsApi } from '../../services/api';
+import { UserRole, ChatSession } from '../../types';
 
-export function Sidebar() {
+interface SidebarProps {
+  activeSessionId?: number;
+  onSessionSelect?: (sessionId: number) => void;
+  onNewChat?: () => void;
+  refreshTrigger?: number;
+}
+
+export function Sidebar({ activeSessionId, onSessionSelect, onNewChat, refreshTrigger }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const themeColors = colors[theme];
   const navigate = useNavigate();
   const location = useLocation();
   const user = authApi.getCurrentUser();
   const [pendingCount, setPendingCount] = useState(0);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [hoveredSessionId, setHoveredSessionId] = useState<number | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -41,11 +52,56 @@ export function Sidebar() {
       };
 
       loadPendingCount();
-      // Refresh every 30 seconds
       const interval = setInterval(loadPendingCount, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  // Load chat sessions
+  useEffect(() => {
+    const loadSessions = async () => {
+      setSessionsLoading(true);
+      try {
+        const response = await chatSessionsApi.list();
+        setSessions(response.sessions);
+      } catch (err) {
+        console.error('Failed to load chat sessions:', err);
+      } finally {
+        setSessionsLoading(false);
+      }
+    };
+
+    loadSessions();
+  }, [refreshTrigger]);
+
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: number) => {
+    e.stopPropagation();
+    if (!confirm('Удалить этот чат?')) return;
+
+    try {
+      await chatSessionsApi.delete(sessionId);
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (activeSessionId === sessionId && onNewChat) {
+        onNewChat();
+      }
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+    }
+  };
+
+  const handleNewChat = () => {
+    if (onNewChat) {
+      onNewChat();
+    } else {
+      navigate('/chat');
+    }
+  };
+
+  const handleSessionClick = (sessionId: number) => {
+    if (onSessionSelect) {
+      onSessionSelect(sessionId);
+    }
+  };
 
   return (
     <Box
@@ -56,7 +112,6 @@ export function Sidebar() {
         borderRight: `1px solid ${themeColors.border.primary}`,
         display: 'flex',
         flexDirection: 'column',
-        overflowY: 'auto',
         position: 'fixed',
         left: 0,
         top: 0,
@@ -67,6 +122,7 @@ export function Sidebar() {
         sx={{
           padding: '16px',
           borderBottom: `1px solid ${themeColors.border.primary}`,
+          flexShrink: 0,
         }}
       >
         <Box
@@ -83,7 +139,7 @@ export function Sidebar() {
         {/* New chat button */}
         <Box
           as="button"
-          onClick={() => navigate('/chat')}
+          onClick={handleNewChat}
           sx={{
             width: '100%',
             display: 'flex',
@@ -104,22 +160,22 @@ export function Sidebar() {
           }}
         >
           <PencilIcon size={16} />
-          New chat
+          Новый чат
         </Box>
       </Box>
 
       {/* Navigation */}
-      <Box sx={{ padding: '8px' }}>
+      <Box sx={{ padding: '8px', flexShrink: 0 }}>
         <NavItem
           icon={CommentDiscussionIcon}
-          label="Chat"
+          label="Чат"
           active={isActive('/chat')}
           onClick={() => navigate('/chat')}
           themeColors={themeColors}
         />
         <NavItem
           icon={FileIcon}
-          label="Documents"
+          label="Документы"
           active={isActive('/documents')}
           onClick={() => navigate('/documents')}
           themeColors={themeColors}
@@ -127,7 +183,7 @@ export function Sidebar() {
         {user?.role === UserRole.ADMIN && (
           <NavItem
             icon={ShieldLockIcon}
-            label="Admin"
+            label="Админ"
             active={isActive('/admin')}
             onClick={() => navigate('/admin')}
             themeColors={themeColors}
@@ -136,14 +192,134 @@ export function Sidebar() {
         )}
       </Box>
 
-      {/* Spacer */}
-      <Box sx={{ flex: 1 }} />
+      {/* Divider */}
+      <Box
+        sx={{
+          height: '1px',
+          backgroundColor: themeColors.border.primary,
+          margin: '8px 16px',
+          flexShrink: 0,
+        }}
+      />
+
+      {/* Chat History Section */}
+      <Box
+        sx={{
+          flex: 1,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+        }}
+      >
+        <Box
+          sx={{
+            padding: '8px 16px',
+            fontSize: '12px',
+            fontWeight: 500,
+            color: themeColors.text.tertiary,
+            textTransform: 'uppercase',
+            flexShrink: 0,
+          }}
+        >
+          История чатов
+        </Box>
+
+        {/* Scrollable sessions list */}
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '0 8px 8px 8px',
+          }}
+        >
+          {sessionsLoading ? (
+            <Box sx={{ padding: '8px 12px', color: themeColors.text.tertiary, fontSize: '13px' }}>
+              Загрузка...
+            </Box>
+          ) : sessions.length === 0 ? (
+            <Box sx={{ padding: '8px 12px', color: themeColors.text.tertiary, fontSize: '13px' }}>
+              Нет истории
+            </Box>
+          ) : (
+            sessions.map(session => (
+              <Box
+                key={session.id}
+                as="button"
+                onClick={() => handleSessionClick(session.id)}
+                onMouseEnter={() => setHoveredSessionId(session.id)}
+                onMouseLeave={() => setHoveredSessionId(null)}
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  backgroundColor: activeSessionId === session.id ? themeColors.bg.secondary : 'transparent',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  color: activeSessionId === session.id ? themeColors.text.primary : themeColors.text.secondary,
+                  fontSize: '13px',
+                  textAlign: 'left',
+                  margin: '2px 0',
+                  position: 'relative',
+                  '&:hover': {
+                    backgroundColor: themeColors.bg.secondary,
+                    color: themeColors.text.primary,
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: activeSessionId === session.id
+                      ? themeColors.accent.blue
+                      : themeColors.text.tertiary,
+                    flexShrink: 0,
+                  }}
+                />
+                <Box
+                  sx={{
+                    flex: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {session.title}
+                </Box>
+                {hoveredSessionId === session.id && (
+                  <Box
+                    as="span"
+                    onClick={(e: React.MouseEvent) => handleDeleteSession(e, session.id)}
+                    sx={{
+                      padding: '2px',
+                      color: themeColors.text.tertiary,
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      '&:hover': {
+                        color: themeColors.accent.red,
+                      },
+                    }}
+                  >
+                    <TrashIcon size={14} />
+                  </Box>
+                )}
+              </Box>
+            ))
+          )}
+        </Box>
+      </Box>
 
       {/* Footer */}
       <Box
         sx={{
           padding: '16px',
           borderTop: `1px solid ${themeColors.border.primary}`,
+          flexShrink: 0,
         }}
       >
         {/* Theme toggle */}
@@ -169,7 +345,7 @@ export function Sidebar() {
           }}
         >
           {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
-          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          <span>{theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</span>
         </Box>
 
         {/* User info */}
@@ -301,4 +477,3 @@ function NavItem({ icon: Icon, label, active, onClick, themeColors, badge }: Nav
     </Box>
   );
 }
-

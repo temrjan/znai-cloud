@@ -8,6 +8,8 @@ from backend.app.models.organization import Organization, OrganizationStatus
 from backend.app.models.organization_invite import OrganizationInvite, InviteStatus
 from backend.app.models.organization_member import OrganizationMember
 from backend.app.models.organization_settings import OrganizationSettings
+from backend.app.models.chat_session import ChatSession
+from backend.app.models.chat_message import ChatMessage, MessageRole
 
 __all__ = [
     "Base",
@@ -23,4 +25,7 @@ __all__ = [
     "InviteStatus",
     "OrganizationMember",
     "OrganizationSettings",
+    "ChatSession",
+    "ChatMessage",
+    "MessageRole",
 ]

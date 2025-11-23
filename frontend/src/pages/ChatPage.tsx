@@ -1,12 +1,12 @@
 /**
- * Chat page for RAG queries - Redesigned in GitHub Copilot style
+ * Chat page for RAG queries - with session support
  */
 import { useState, useEffect, useRef } from 'react';
 import { Box } from '../components/common/Box';
 import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile, useIsDesktop } from '../hooks/useMediaQuery';
 import { colors } from '../styles/theme';
-import { chatApi } from '../services/api';
+import { chatApi, chatSessionsApi, authApi } from '../services/api';
 import type { ChatMessage as ChatMessageType } from '../types';
 
 // Layout components
@@ -29,8 +29,11 @@ export function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchScope, setSearchScope] = useState<'all' | 'organization' | 'private'>('all');
+  const [activeSessionId, setActiveSessionId] = useState<number | undefined>(undefined);
+  const [sidebarRefresh, setSidebarRefresh] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const user = authApi.getCurrentUser();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,6 +42,33 @@ export function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Load session messages when session changes
+  const loadSessionMessages = async (sessionId: number) => {
+    try {
+      const session = await chatSessionsApi.get(sessionId);
+      const loadedMessages: ChatMessageType[] = session.messages.map(msg => ({
+        id: msg.id.toString(),
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.created_at),
+        sources: msg.sources,
+      }));
+      setMessages(loadedMessages);
+      setActiveSessionId(sessionId);
+    } catch (err) {
+      console.error('Failed to load session:', err);
+    }
+  };
+
+  const handleSessionSelect = (sessionId: number) => {
+    loadSessionMessages(sessionId);
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setActiveSessionId(undefined);
+  };
 
   const handleSend = async (input: string) => {
     if (!input.trim() || loading) return;
@@ -54,7 +84,7 @@ export function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await chatApi.query(input, searchScope);
+      const response = await chatApi.query(input, searchScope, activeSessionId);
 
       const assistantMessage: ChatMessageType = {
         id: (Date.now() + 1).toString(),
@@ -65,11 +95,17 @@ export function ChatPage() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Update active session and refresh sidebar
+      if (response.session_id) {
+        setActiveSessionId(response.session_id);
+        setSidebarRefresh(prev => prev + 1);
+      }
     } catch (err: any) {
       const errorMessage: ChatMessageType = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `Error: ${err.response?.data?.detail || 'Failed to get response. Please try again.'}`,
+        content: `Ошибка: ${err.response?.data?.detail || 'Не удалось получить ответ. Попробуйте снова.'}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -101,16 +137,27 @@ export function ChatPage() {
         />
       )}
 
-      {/* Mobile: Sidebar overlay */}
+      {/* Mobile: Sidebar overlay with chat history */}
       {isMobile && (
         <MobileSidebar
           isOpen={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
+          activeSessionId={activeSessionId}
+          onSessionSelect={handleSessionSelect}
+          onNewChat={handleNewChat}
+          refreshTrigger={sidebarRefresh}
         />
       )}
 
-      {/* Desktop: Fixed Sidebar */}
-      {isDesktop && <Sidebar />}
+      {/* Desktop: Fixed Sidebar with session support */}
+      {isDesktop && (
+        <Sidebar
+          activeSessionId={activeSessionId}
+          onSessionSelect={handleSessionSelect}
+          onNewChat={handleNewChat}
+          refreshTrigger={sidebarRefresh}
+        />
+      )}
 
       {/* Main chat area */}
       <Box
@@ -152,7 +199,7 @@ export function ChatPage() {
                   marginBottom: '8px',
                 }}
               >
-                Good {getTimeOfDay()}, {getUserFirstName()}!
+                {getGreeting()}, {user?.full_name?.split(' ')[0] || 'User'}!
               </Box>
               <Box
                 sx={{
@@ -160,7 +207,7 @@ export function ChatPage() {
                   color: themeColors.text.secondary,
                 }}
               >
-                Ask questions about your uploaded documents
+                Задайте вопрос по вашим документам
               </Box>
             </Box>
           ) : (
@@ -251,7 +298,7 @@ export function ChatPage() {
           <ChatInput
             onSend={handleSend}
             loading={loading}
-            placeholder="Ask anything"
+            placeholder="Задайте вопрос..."
           />
         </Box>
       </Box>
@@ -260,15 +307,10 @@ export function ChatPage() {
   );
 }
 
-// Helper functions
-function getTimeOfDay(): string {
+// Helper function
+function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'morning';
-  if (hour < 18) return 'afternoon';
-  return 'evening';
-}
-
-function getUserFirstName(): string {
-  // Mock - replace with actual user data
-  return 'User';
+  if (hour < 12) return 'Доброе утро';
+  if (hour < 18) return 'Добрый день';
+  return 'Добрый вечер';
 }

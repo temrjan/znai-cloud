@@ -66,32 +66,6 @@ export function ChatInput({
         padding: '0 24px',
       }}
     >
-      {/* Status text */}
-      {loading && (
-        <>
-          <style>{`
-            @keyframes gradient-shift {
-              0% { background-position: 0% 50%; }
-              50% { background-position: 100% 50%; }
-              100% { background-position: 0% 50%; }
-            }
-          `}</style>
-          <div style={{
-            fontSize: '14px',
-            marginBottom: '8px',
-            fontStyle: 'italic',
-            background: 'linear-gradient(90deg, #1B3554 0%, #80AAD3 25%, #1B3554 50%, #80AAD3 75%, #1B3554 100%)',
-            backgroundSize: '200% 100%',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            animation: 'gradient-shift 3s ease-in-out infinite',
-          }}>
-            Copilot is responding...
-          </div>
-        </>
-      )}
-
       {/* Textarea with button inside */}
       <Box
         sx={{
@@ -137,7 +111,7 @@ export function ChatInput({
           value={input}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={loading ? 'Copilot is responding...' : placeholder}
+          placeholder={loading ? 'znai больше...' : placeholder}
           disabled={loading || disabled}
         />
 

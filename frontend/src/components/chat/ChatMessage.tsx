@@ -146,7 +146,7 @@ interface LoadingMessageProps {
   text?: string;
 }
 
-export function LoadingMessage({ text = 'Copilot is responding...' }: LoadingMessageProps) {
+export function LoadingMessage({ text = 'znai больше...' }: LoadingMessageProps) {
   const { theme } = useTheme();
   const themeColors = colors[theme];
 
@@ -174,16 +174,26 @@ export function LoadingMessage({ text = 'Copilot is responding...' }: LoadingMes
         <CommentDiscussionIcon size={24} />
       </Box>
 
-      {/* Loading text */}
-      <Box
-        sx={{
-          fontSize: '14px',
-          color: themeColors.text.secondary,
-          fontStyle: 'italic',
-        }}
-      >
+      {/* Loading text with gradient animation */}
+      <style>{`
+        @keyframes gradient-shift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
+      <div style={{
+        fontSize: '14px',
+        fontStyle: 'italic',
+        background: 'linear-gradient(90deg, #1B3554 0%, #80AAD3 25%, #1B3554 50%, #80AAD3 75%, #1B3554 100%)',
+        backgroundSize: '200% 100%',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        animation: 'gradient-shift 3s ease-in-out infinite',
+      }}>
         {text}
-      </Box>
+      </div>
     </Box>
   );
 }

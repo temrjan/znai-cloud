@@ -159,3 +159,29 @@ export interface InviteDetails {
   is_valid: boolean;
   remaining_uses: number;
 }
+
+// Chat session types
+export interface ChatSession {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count?: number;
+}
+
+export interface ChatSessionWithMessages extends ChatSession {
+  messages: ChatMessageDB[];
+}
+
+export interface ChatMessageDB {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  sources?: string[];
+  created_at: string;
+}
+
+export interface ChatSessionListResponse {
+  sessions: ChatSession[];
+  total: number;
+}

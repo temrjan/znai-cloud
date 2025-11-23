@@ -95,6 +95,12 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(ChatSession.updated_at)"
+    )
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, status={self.status})>"

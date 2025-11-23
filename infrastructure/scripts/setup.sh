@@ -23,6 +23,21 @@ fi
 PROJECT_DIR="/home/temrjan/ai-avangard"
 USER="temrjan"
 
+# Database credentials (can be overridden via environment)
+DB_NAME="${DB_NAME:-ai_avangard}"
+DB_USER="${DB_USER:-ai_avangard_admin}"
+
+# Prompt for password if not set
+if [ -z "$DB_PASSWORD" ]; then
+    echo -e "${YELLOW}Enter PostgreSQL password for user $DB_USER:${NC}"
+    read -s DB_PASSWORD
+    echo ""
+    if [ -z "$DB_PASSWORD" ]; then
+        echo -e "${RED}Password cannot be empty!${NC}"
+        exit 1
+    fi
+fi
+
 echo -e "${GREEN}==============================================\n"
 echo "  AI-Avangard Installation Script"
 echo -e "  Version: 1.0.0"
@@ -59,10 +74,10 @@ systemctl enable postgresql
 systemctl start postgresql
 
 # Create database and user
-sudo -u postgres psql -c "CREATE DATABASE ai_avangard;" || echo "Database already exists"
-sudo -u postgres psql -c "CREATE USER ai_avangard_admin WITH ENCRYPTED PASSWORD 'ai_avangard_2025';" || echo "User already exists"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ai_avangard TO ai_avangard_admin;"
-sudo -u postgres psql -c "ALTER DATABASE ai_avangard OWNER TO ai_avangard_admin;"
+sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;" || echo "Database already exists"
+sudo -u postgres psql -c "CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';" || echo "User already exists"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+sudo -u postgres psql -c "ALTER DATABASE $DB_NAME OWNER TO $DB_USER;"
 
 echo -e "${GREEN}✓ PostgreSQL installed and configured${NC}"
 

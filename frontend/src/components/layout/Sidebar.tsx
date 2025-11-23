@@ -14,6 +14,7 @@ import {
   MoonIcon,
   TrashIcon,
   SignOutIcon,
+  OrganizationIcon,
 } from '@primer/octicons-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { colors } from '../../styles/theme';
@@ -181,6 +182,15 @@ export function Sidebar({ activeSessionId, onSessionSelect, onNewChat, refreshTr
           onClick={() => navigate('/documents')}
           themeColors={themeColors}
         />
+        {user?.organization_id && (
+          <NavItem
+            icon={OrganizationIcon}
+            label="Организация"
+            active={isActive('/organization')}
+            onClick={() => navigate('/organization')}
+            themeColors={themeColors}
+          />
+        )}
         {user?.role === UserRole.ADMIN && (
           <NavItem
             icon={ShieldLockIcon}

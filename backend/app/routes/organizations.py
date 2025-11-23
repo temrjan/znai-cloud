@@ -156,12 +156,21 @@ async def get_my_organization(
     )
     doc_count = doc_count_result.scalar()
 
-    # Build response
-    org_response = OrganizationResponse.model_validate(organization)
-    org_response.current_members_count = member_count
-    org_response.current_documents_count = doc_count
-
-    return org_response
+    # Build response manually to avoid validation errors
+    return OrganizationResponse(
+        id=organization.id,
+        name=organization.name,
+        slug=organization.slug,
+        owner_id=organization.owner_id,
+        max_members=organization.max_members,
+        current_members_count=member_count or 0,
+        max_documents=organization.max_documents,
+        current_documents_count=doc_count or 0,
+        max_queries_daily=organization.max_queries_org_daily,
+        status=organization.status,
+        created_at=organization.created_at,
+        updated_at=organization.updated_at,
+    )
 
 
 @router.patch("/my", response_model=OrganizationResponse)
@@ -638,7 +647,19 @@ async def get_organization_settings(
         await db.commit()
         await db.refresh(settings)
 
-    return settings
+    # Return with response_language alias for frontend compatibility
+    return OrganizationSettingsResponse(
+        organization_id=settings.organization_id,
+        custom_system_prompt=settings.custom_system_prompt,
+        custom_temperature=settings.custom_temperature,
+        custom_max_tokens=settings.custom_max_tokens,
+        custom_model=settings.custom_model,
+        custom_terminology=settings.custom_terminology,
+        primary_language=settings.primary_language,
+        response_language=settings.primary_language,  # Alias for frontend
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+    )
 
 
 @router.patch("/my/settings", response_model=OrganizationSettingsResponse)

@@ -27,6 +27,8 @@ export interface User {
   full_name: string;
   role: UserRole;
   status: UserStatus;
+  organization_id?: number;
+  role_in_org?: string;
   created_at: string;
 }
 

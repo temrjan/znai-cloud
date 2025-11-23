@@ -34,35 +34,22 @@ class OrganizationSettingsUpdate(BaseModel):
 
 class OrganizationSettingsResponse(BaseModel):
     """Schema for organization settings response."""
-    id: int
     organization_id: int
 
     # AI model settings
-    custom_system_prompt: Optional[str]
-    custom_temperature: Optional[float]
-    custom_top_p: Optional[float]
-    custom_max_tokens: Optional[int]
-    custom_terminology: Optional[Dict[str, Any]]
+    custom_system_prompt: Optional[str] = None
+    custom_temperature: Optional[float] = None
+    custom_max_tokens: Optional[int] = None
+    custom_model: Optional[str] = None
+    custom_terminology: Optional[Dict[str, Any]] = None
+
+    # Language settings
+    primary_language: Optional[str] = None
+    response_language: Optional[str] = None  # Alias for primary_language for frontend
 
     # Chunking settings
-    chunk_size: Optional[int]
-    chunk_overlap: Optional[int]
-
-    # Search settings
-    search_top_k: Optional[int]
-    search_similarity_threshold: Optional[float]
-
-    # Response settings
-    response_max_length: Optional[int]
-    response_language: Optional[str]
-    enable_citations: Optional[bool]
-    enable_followup_questions: Optional[bool]
-
-    # Advanced settings
-    reranking_enabled: Optional[bool]
-    reranking_top_n: Optional[int]
-    answer_mode: Optional[str]
-    context_window_size: Optional[int]
+    chunk_size: Optional[int] = None
+    chunk_overlap: Optional[int] = None
 
     class Config:
         from_attributes = True

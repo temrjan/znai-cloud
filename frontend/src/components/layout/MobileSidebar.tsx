@@ -15,6 +15,7 @@ import {
   PlusIcon,
   TrashIcon,
   SignOutIcon,
+  OrganizationIcon,
 } from '@primer/octicons-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { colors } from '../../styles/theme';
@@ -222,22 +223,31 @@ export function MobileSidebar({
           {/* Main navigation */}
           <MenuItem
             icon={CommentDiscussionIcon}
-            label="Chat"
+            label="Чат"
             active={isActive('/chat')}
             onClick={() => handleNavigate('/chat')}
             themeColors={themeColors}
           />
           <MenuItem
             icon={FileIcon}
-            label="Documents"
+            label="Документы"
             active={isActive('/documents')}
             onClick={() => handleNavigate('/documents')}
             themeColors={themeColors}
           />
+          {user?.organization_id && (
+            <MenuItem
+              icon={OrganizationIcon}
+              label="Организация"
+              active={isActive('/organization')}
+              onClick={() => handleNavigate('/organization')}
+              themeColors={themeColors}
+            />
+          )}
           {user?.role === UserRole.ADMIN && (
             <MenuItem
               icon={ShieldLockIcon}
-              label="Admin"
+              label="Админ"
               active={isActive('/admin')}
               onClick={() => handleNavigate('/admin')}
               themeColors={themeColors}

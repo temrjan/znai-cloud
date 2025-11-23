@@ -26,6 +26,24 @@ openai_client = OpenAI(api_key=settings.openai_api_key)
 MAX_CONTEXT_MESSAGES = 6  # Last 3 pairs of user/assistant
 
 
+def strip_markdown(text: str) -> str:
+    """Remove markdown formatting from text."""
+    import re
+    # Remove bold/italic markers
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **bold**
+    text = re.sub(r'\*([^*]+)\*', r'\1', text)      # *italic*
+    text = re.sub(r'__([^_]+)__', r'\1', text)      # __bold__
+    text = re.sub(r'_([^_]+)_', r'\1', text)        # _italic_
+    # Remove headers
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # Remove code blocks
+    text = re.sub(r'```[^`]*```', '', text, flags=re.DOTALL)
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    # Remove bullet points and convert to plain text
+    text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)
+    return text
+
+
 @router.post("", response_model=ChatResponse)
 async def chat_query(
     request: ChatRequest,
@@ -154,12 +172,38 @@ async def chat_query(
             context = context.replace(term, f"{term} ({expansion})")
 
     # Determine OpenAI parameters (use org settings if available)
-    system_prompt = org_settings.custom_system_prompt if org_settings and org_settings.custom_system_prompt else (
-        "Ты - помощник, который отвечает на вопросы на основе предоставленного контекста. "
-        "Давай подробные, развёрнутые ответы, используя всю доступную информацию из контекста. "
-        "Если в контексте есть номера сур и аятов (например [2:3]), обязательно включай их в ответ. "
-        "Используй только информацию из контекста. Если ответа нет в контексте, так и скажи."
-    )
+    default_prompt = """Ты - ассистент базы знаний. Твоя задача - давать точные ответы на основе загруженных документов организации.
+
+СТРОГИЕ ПРАВИЛА:
+- Используй ТОЛЬКО информацию из предоставленного контекста
+- Если ответа нет в контексте: "В загруженных документах нет информации по этому вопросу"
+- ЗАПРЕЩЕНО использовать общие знания или домысливать факты
+
+ЦИТИРОВАНИЕ:
+- Указывай источник КАЖДОГО факта: [Название документа, стр./раздел]
+- Сохраняй оригинальную нумерацию из документов (номера, коды, индексы)
+- При прямом цитировании используй кавычки
+
+ФОРМАТИРОВАНИЕ:
+- НЕ используй markdown разметку (**, *, #, ##, -, *)
+- НЕ используй жирный текст, курсив, заголовки
+- Пиши обычным текстом с нумерованными списками: 1. 2. 3.
+- Эмоджи используй УМЕРЕННО - максимум 1-2 за весь ответ, только если уместно
+
+СТИЛЬ ОТВЕТА:
+- Адаптируйся под терминологию и стиль документов
+- Давай развёрнутые, но чёткие ответы
+- Структурируй информацию логично
+- Если информация противоречива, укажи все точки зрения
+
+ФОРМАТ:
+1. Прямой ответ на вопрос
+2. Детальное объяснение с цитатами
+3. Источники (если несколько)
+
+Твоя цель - максимальная точность и полезность."""
+
+    system_prompt = org_settings.custom_system_prompt if org_settings and org_settings.custom_system_prompt else default_prompt
 
     temperature = org_settings.custom_temperature if org_settings and org_settings.custom_temperature is not None else 0.5
     max_tokens = org_settings.custom_max_tokens if org_settings and org_settings.custom_max_tokens else 2500
@@ -190,6 +234,8 @@ async def chat_query(
         )
 
         answer = response.choices[0].message.content
+        # Strip markdown formatting from the answer
+        answer = strip_markdown(answer)
 
     except Exception as e:
         raise HTTPException(

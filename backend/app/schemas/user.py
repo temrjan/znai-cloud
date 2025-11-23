@@ -26,6 +26,8 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     status: str
     role: str
+    organization_id: Optional[int] = None
+    role_in_org: Optional[str] = None
     created_at: datetime
 
     class Config:

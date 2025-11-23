@@ -77,7 +77,7 @@ export function Sidebar() {
             marginBottom: '12px',
           }}
         >
-          AI-Avangard
+          Znai.cloud
         </Box>
 
         {/* New chat button */}

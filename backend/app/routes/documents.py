@@ -2,16 +2,17 @@
 import hashlib
 import shutil
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func, or_
 
 from backend.app.database import get_db
 from backend.app.models.user import User
 from backend.app.models.document import Document, DocumentStatus
+from backend.app.models.organization import Organization
 from backend.app.models.quota import UserQuota
 from backend.app.schemas.document import DocumentResponse
 from backend.app.middleware.auth import get_current_user
@@ -38,10 +39,15 @@ ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".doc", ".docx"}
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: UploadFile = File(...),
+    visibility: str = Query(default="private", regex="^(private|organization)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Upload and index a document."""
+    """
+    Upload and index a document.
+
+    Visibility can be 'private' (personal) or 'organization' (shared with org members).
+    """
 
     # Check file type by MIME and extension
     file_ext = Path(file.filename).suffix.lower()
@@ -51,16 +57,11 @@ async def upload_document(
             detail=f"File type not supported. Allowed: PDF, TXT, MD, DOC, DOCX",
         )
 
-    # Check quota
-    quota_result = await db.execute(
-        select(UserQuota).where(UserQuota.user_id == current_user.id)
-    )
-    quota = quota_result.scalar_one()
-
-    if quota.current_documents >= quota.max_documents:
+    # Validate visibility
+    if visibility == "organization" and current_user.organization_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Document limit reached ({quota.max_documents} documents)",
+            detail="Cannot upload organization documents without being in an organization",
         )
 
     # Calculate file hash
@@ -68,18 +69,70 @@ async def upload_document(
     file_hash = hashlib.sha256(file_content).hexdigest()
     await file.seek(0)
 
-    # Check for duplicate
-    dup_result = await db.execute(
-        select(Document).where(
-            Document.user_id == current_user.id,
-            Document.file_hash == file_hash,
+    # Check for duplicate based on visibility
+    if visibility == "organization":
+        dup_result = await db.execute(
+            select(Document).where(
+                Document.organization_id == current_user.organization_id,
+                Document.file_hash == file_hash,
+            )
         )
-    )
+    else:
+        dup_result = await db.execute(
+            select(Document).where(
+                Document.uploaded_by_user_id == current_user.id,
+                Document.visibility == "private",
+                Document.file_hash == file_hash,
+            )
+        )
+
     if dup_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This document has already been uploaded",
         )
+
+    # Check quota based on visibility
+    if visibility == "organization":
+        # Check organization document quota
+        org_result = await db.execute(
+            select(Organization).where(Organization.id == current_user.organization_id)
+        )
+        organization = org_result.scalar_one()
+
+        org_doc_count = await db.scalar(
+            select(func.count(Document.id)).where(
+                Document.organization_id == current_user.organization_id
+            )
+        )
+
+        if org_doc_count >= organization.max_documents:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Organization document limit reached ({organization.max_documents} documents)",
+            )
+    else:
+        # Check personal document quota
+        quota_result = await db.execute(
+            select(UserQuota).where(UserQuota.user_id == current_user.id)
+        )
+        quota = quota_result.scalar_one()
+
+        # Count personal documents
+        personal_doc_count = await db.scalar(
+            select(func.count(Document.id)).where(
+                Document.uploaded_by_user_id == current_user.id,
+                Document.visibility == "private"
+            )
+        )
+
+        # Use personal quota if user is in org (hybrid mode), otherwise use general quota
+        max_docs = quota.personal_max_documents if current_user.organization_id else quota.max_documents
+        if personal_doc_count >= max_docs:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Personal document limit reached ({max_docs} documents)",
+            )
 
     # Save file
     file_path = UPLOAD_DIR / f"{current_user.id}_{file_hash}_{file.filename}"
@@ -88,21 +141,18 @@ async def upload_document(
 
     # Create document record
     document = Document(
-        user_id=current_user.id,
+        uploaded_by_user_id=current_user.id,
+        organization_id=current_user.organization_id if visibility == "organization" else None,
         filename=file.filename,
         file_path=str(file_path),
         file_hash=file_hash,
         file_size=len(file_content),
         mime_type=file.content_type,
+        visibility=visibility,
         status=DocumentStatus.PROCESSING,
     )
 
     db.add(document)
-    await db.flush()
-
-    # Update quota
-    quota.current_documents += 1
-
     await db.commit()
     await db.refresh(document)
 
@@ -111,16 +161,52 @@ async def upload_document(
 
 @router.get("", response_model=List[DocumentResponse])
 async def list_documents(
+    scope: Optional[str] = Query(default="all", regex="^(all|organization|private)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List user's documents."""
-    result = await db.execute(
-        select(Document)
-        .where(Document.user_id == current_user.id)
-        .order_by(Document.uploaded_at.desc())
-    )
+    """
+    List documents accessible to the user.
+
+    Scopes:
+    - 'all': Both organization and personal documents (default, hybrid mode)
+    - 'organization': Only organization documents
+    - 'private': Only personal documents
+    """
+    conditions = []
+
+    if scope == "organization":
+        if current_user.organization_id is None:
+            return []
+        conditions.append(Document.organization_id == current_user.organization_id)
+
+    elif scope == "private":
+        conditions.append(
+            (Document.uploaded_by_user_id == current_user.id) &
+            (Document.visibility == "private")
+        )
+
+    else:  # scope == "all"
+        # Hybrid mode: show org docs + personal docs
+        if current_user.organization_id:
+            conditions.append(
+                or_(
+                    Document.organization_id == current_user.organization_id,
+                    (Document.uploaded_by_user_id == current_user.id) &
+                    (Document.visibility == "private")
+                )
+            )
+        else:
+            # Personal mode: only personal documents
+            conditions.append(
+                (Document.uploaded_by_user_id == current_user.id) &
+                (Document.visibility == "private")
+            )
+
+    query = select(Document).where(*conditions).order_by(Document.uploaded_at.desc())
+    result = await db.execute(query)
     documents = result.scalars().all()
+
     return documents
 
 
@@ -133,10 +219,7 @@ async def index_document(
     """Index an uploaded document."""
     # Get document
     result = await db.execute(
-        select(Document).where(
-            Document.id == document_id,
-            Document.user_id == current_user.id,
-        )
+        select(Document).where(Document.id == document_id)
     )
     document = result.scalar_one_or_none()
 
@@ -144,6 +227,19 @@ async def index_document(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
+        )
+
+    # Check access: user must own it or be in same organization
+    has_access = False
+    if document.visibility == "private":
+        has_access = (document.uploaded_by_user_id == current_user.id)
+    elif document.visibility == "organization":
+        has_access = (document.organization_id == current_user.organization_id)
+
+    if not has_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this document",
         )
 
     if document.status == DocumentStatus.INDEXED:
@@ -160,6 +256,8 @@ async def index_document(
         chunks_count = document_processor.index_document(
             document_id=document.id,
             user_id=current_user.id,
+            organization_id=document.organization_id,
+            visibility=document.visibility,
             filename=document.filename,
             file_path=Path(document.file_path),
             mime_type=document.mime_type,
@@ -188,12 +286,16 @@ async def delete_document(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a document."""
+    """
+    Delete a document.
+
+    Permission rules:
+    - Users can delete their own personal documents
+    - Organization admins/owners can delete any organization document
+    - Organization members can only delete their own organization documents
+    """
     result = await db.execute(
-        select(Document).where(
-            Document.id == document_id,
-            Document.user_id == current_user.id,
-        )
+        select(Document).where(Document.id == document_id)
     )
     document = result.scalar_one_or_none()
 
@@ -201,6 +303,29 @@ async def delete_document(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
+        )
+
+    # Check permissions
+    can_delete = False
+
+    if document.visibility == "private":
+        # Personal document: only owner can delete
+        can_delete = (document.uploaded_by_user_id == current_user.id)
+    else:
+        # Organization document
+        if document.organization_id == current_user.organization_id:
+            # Same organization
+            if current_user.role_in_org in ['owner', 'admin']:
+                # Admins/owners can delete any org document
+                can_delete = True
+            elif document.uploaded_by_user_id == current_user.id:
+                # Members can delete their own documents
+                can_delete = True
+
+    if not can_delete:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this document",
         )
 
     # Delete from Qdrant
@@ -214,13 +339,6 @@ async def delete_document(
         Path(document.file_path).unlink(missing_ok=True)
     except Exception as e:
         print(f"Warning: Failed to delete file: {e}")
-
-    # Update quota
-    quota_result = await db.execute(
-        select(UserQuota).where(UserQuota.user_id == current_user.id)
-    )
-    quota = quota_result.scalar_one()
-    quota.current_documents = max(0, quota.current_documents - 1)
 
     # Delete from database
     await db.delete(document)

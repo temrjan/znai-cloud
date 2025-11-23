@@ -25,6 +25,11 @@ class UserQuota(Base):
     queries_today: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_query_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
+    # Personal quota limits
+    personal_max_documents: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    personal_current_documents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    personal_max_queries_daily: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
+
     # Relationship
     user: Mapped["User"] = relationship("User", back_populates="quota")
 

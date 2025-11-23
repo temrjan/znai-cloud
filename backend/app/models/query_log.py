@@ -19,10 +19,16 @@ class QueryLog(Base):
         nullable=False,
         index=True
     )
+    organization_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
+    )
 
     query_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     sources_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    search_mode: Mapped[str] = mapped_column(String(50), default="all", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -31,8 +37,9 @@ class QueryLog(Base):
         index=True
     )
 
-    # Relationship
+    # Relationships
     user: Mapped["User"] = relationship("User", back_populates="query_logs")
+    organization: Mapped[Optional["Organization"]] = relationship("Organization")
 
     def __repr__(self) -> str:
         return f"<QueryLog(id={self.id}, user_id={self.user_id})>"

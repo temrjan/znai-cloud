@@ -28,9 +28,14 @@ class Document(Base):
         primary_key=True,
         default=uuid.uuid4
     )
-    user_id: Mapped[int] = mapped_column(
+    uploaded_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True
+    )
+    organization_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=True,
         index=True
     )
 
@@ -42,6 +47,11 @@ class Document(Base):
 
     chunks_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     error_message: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    visibility: Mapped[str] = mapped_column(
+        String(50),
+        default="private",
+        nullable=False
+    )
     status: Mapped[DocumentStatus] = mapped_column(
         Enum(DocumentStatus),
         default=DocumentStatus.PROCESSING,
@@ -55,11 +65,19 @@ class Document(Base):
     )
     indexed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    # Relationship
-    user: Mapped["User"] = relationship("User", back_populates="documents")
+    # Relationships
+    uploaded_by_user: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[uploaded_by_user_id],
+        back_populates="documents"
+    )
+    organization: Mapped[Optional["Organization"]] = relationship(
+        "Organization",
+        back_populates="documents"
+    )
 
     __table_args__ = (
-        UniqueConstraint("user_id", "file_hash", name="unique_user_file_hash"),
+        UniqueConstraint("uploaded_by_user_id", "file_hash", name="unique_user_file_hash"),
     )
 
     def __repr__(self) -> str:

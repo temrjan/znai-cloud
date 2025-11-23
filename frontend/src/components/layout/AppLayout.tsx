@@ -42,7 +42,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               cursor: "pointer",
             }}
           >
-            AI-Avangard
+            Znai.cloud
           </Header.Link>
         </Header.Item>
 

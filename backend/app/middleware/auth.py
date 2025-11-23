@@ -74,3 +74,110 @@ async def get_current_active_user(
 ) -> User:
     """Get current active user (approved status)."""
     return current_user
+
+
+async def require_org_member(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Require user to be a member of an organization.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        Current user (must have organization_id)
+
+    Raises:
+        HTTPException: If user is not part of any organization
+    """
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This action requires organization membership",
+        )
+    return current_user
+
+
+async def require_org_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Require user to be an admin or owner in their organization.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        Current user (must be admin or owner)
+
+    Raises:
+        HTTPException: If user is not admin/owner or not in organization
+    """
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This action requires organization membership",
+        )
+
+    if current_user.role_in_org not in ['admin', 'owner']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This action requires admin or owner role in the organization",
+        )
+
+    return current_user
+
+
+async def require_org_owner(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Require user to be the owner of their organization.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        Current user (must be owner)
+
+    Raises:
+        HTTPException: If user is not owner or not in organization
+    """
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This action requires organization membership",
+        )
+
+    if current_user.role_in_org != 'owner':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This action requires organization owner role",
+        )
+
+    return current_user
+
+
+async def require_platform_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Require user to be a platform administrator.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        Current user (must be platform admin)
+
+    Raises:
+        HTTPException: If user is not platform admin
+    """
+    if not current_user.is_platform_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This action requires platform administrator privileges",
+        )
+
+    return current_user

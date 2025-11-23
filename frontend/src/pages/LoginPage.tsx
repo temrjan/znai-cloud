@@ -53,7 +53,7 @@ export function LoginPage() {
       >
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <Heading as="h1" style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
-            AI-Avangard
+            Znai.cloud
           </Heading>
           <Text as="p" style={{ color: "#57606a" }}>
             Sign in to your knowledge base

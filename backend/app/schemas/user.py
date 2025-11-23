@@ -9,6 +9,8 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
+    organization_name: Optional[str] = Field(None, min_length=2, max_length=255)
+    invite_code: Optional[str] = None
 
 
 class UserLogin(BaseModel):

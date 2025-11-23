@@ -1,5 +1,5 @@
 /**
- * Admin page - GitHub Copilot style
+ * Admin page - Platform owner dashboard
  */
 import { useState, useEffect } from 'react';
 import { Box } from '../components/common/Box';
@@ -7,11 +7,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile, useIsDesktop } from '../hooks/useMediaQuery';
 import { colors } from '../styles/theme';
 import { adminApi } from '../services/api';
-import { User } from '../types';
+import { User, PendingOrganization } from '../types';
 import {
   CheckIcon,
   XIcon,
   PersonIcon,
+  OrganizationIcon,
 } from '@primer/octicons-react';
 
 // Layout components
@@ -19,22 +20,25 @@ import { TopBar } from '../components/layout/TopBar';
 import { MobileSidebar } from '../components/layout/MobileSidebar';
 import { Sidebar } from '../components/layout/Sidebar';
 
+type TabType = 'organizations' | 'users';
+
 export function AdminPage() {
   const { theme } = useTheme();
   const themeColors = colors[theme];
   const isMobile = useIsMobile();
   const isDesktop = useIsDesktop();
 
+  const [activeTab, setActiveTab] = useState<TabType>('organizations');
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [pendingOrgs, setPendingOrgs] = useState<PendingOrganization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    loadPendingUsers();
+    loadData();
   }, []);
 
-  // Auto-clear error after 5 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(''), 5000);
@@ -42,36 +46,60 @@ export function AdminPage() {
     }
   }, [error]);
 
-  const loadPendingUsers = async () => {
+  const loadData = async () => {
     try {
-      const users = await adminApi.getPendingUsers();
+      const [users, orgs] = await Promise.all([
+        adminApi.getPendingUsers(),
+        adminApi.getPendingOrganizations(),
+      ]);
       setPendingUsers(users);
+      setPendingOrgs(orgs);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load pending users');
+      setError(err.response?.data?.detail || 'Ошибка загрузки данных');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (userId: string) => {
+  const handleApproveUser = async (userId: string) => {
     try {
       await adminApi.approveUser(userId);
       setPendingUsers(pendingUsers.filter((u) => u.id !== userId));
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to approve user');
+      setError(err.response?.data?.detail || 'Ошибка подтверждения');
     }
   };
 
-  const handleReject = async (userId: string, email: string) => {
-    if (!confirm(`Reject user ${email}?`)) return;
-
+  const handleRejectUser = async (userId: string, email: string) => {
+    if (!confirm(`Отклонить пользователя ${email}?`)) return;
     try {
       await adminApi.rejectUser(userId);
       setPendingUsers(pendingUsers.filter((u) => u.id !== userId));
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to reject user');
+      setError(err.response?.data?.detail || 'Ошибка отклонения');
     }
   };
+
+  const handleApproveOrg = async (orgId: number) => {
+    try {
+      await adminApi.approveOrganization(orgId);
+      setPendingOrgs(pendingOrgs.filter((o) => o.id !== orgId));
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Ошибка подтверждения');
+    }
+  };
+
+  const handleRejectOrg = async (orgId: number, name: string) => {
+    if (!confirm(`Отклонить организацию "${name}"?`)) return;
+    try {
+      await adminApi.rejectOrganization(orgId);
+      setPendingOrgs(pendingOrgs.filter((o) => o.id !== orgId));
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Ошибка отклонения');
+    }
+  };
+
+  const totalPending = pendingUsers.length + pendingOrgs.length;
 
   return (
     <Box
@@ -84,7 +112,6 @@ export function AdminPage() {
         overflow: 'hidden',
       }}
     >
-      {/* Mobile: TopBar */}
       {isMobile && (
         <TopBar
           onMenuClick={() => setMobileMenuOpen(true)}
@@ -92,7 +119,6 @@ export function AdminPage() {
         />
       )}
 
-      {/* Mobile: Sidebar overlay */}
       {isMobile && (
         <MobileSidebar
           isOpen={mobileMenuOpen}
@@ -100,10 +126,8 @@ export function AdminPage() {
         />
       )}
 
-      {/* Desktop: Fixed Sidebar */}
       {isDesktop && <Sidebar />}
 
-      {/* Main content area */}
       <Box
         sx={{
           flex: 1,
@@ -132,21 +156,16 @@ export function AdminPage() {
                 marginBottom: '8px',
               }}
             >
-              User Approvals
+              Панель управления
             </Box>
-            <Box
-              sx={{
-                fontSize: '14px',
-                color: themeColors.text.secondary,
-              }}
-            >
-              {pendingUsers.length === 0
-                ? 'No pending registrations'
-                : `${pendingUsers.length} user${pendingUsers.length === 1 ? '' : 's'} waiting for approval`}
+            <Box sx={{ fontSize: '14px', color: themeColors.text.secondary }}>
+              {totalPending === 0
+                ? 'Нет ожидающих заявок'
+                : `${totalPending} заявок ожидают рассмотрения`}
             </Box>
           </Box>
 
-          {/* Error message */}
+          {/* Error */}
           {error && (
             <Box
               sx={{
@@ -162,57 +181,141 @@ export function AdminPage() {
             </Box>
           )}
 
-          {/* Users list */}
-          {loading ? (
+          {/* Tabs */}
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '24px',
+              borderBottom: `1px solid ${themeColors.border.primary}`,
+              paddingBottom: '12px',
+            }}
+          >
             <Box
+              as="button"
+              onClick={() => setActiveTab('organizations')}
               sx={{
-                textAlign: 'center',
-                padding: '48px',
-                color: themeColors.text.secondary,
+                padding: '8px 16px',
+                backgroundColor: activeTab === 'organizations' ? themeColors.accent.blueGradient : 'transparent',
+                color: activeTab === 'organizations' ? '#ffffff' : themeColors.text.secondary,
+                border: 'none',
+                borderRadius: '6px',
                 fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              Loading pending users...
+              <OrganizationIcon size={16} />
+              Организации
+              {pendingOrgs.length > 0 && (
+                <Box
+                  sx={{
+                    backgroundColor: '#ff4444',
+                    color: '#ffffff',
+                    borderRadius: '10px',
+                    padding: '2px 8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {pendingOrgs.length}
+                </Box>
+              )}
             </Box>
-          ) : pendingUsers.length === 0 ? (
             <Box
+              as="button"
+              onClick={() => setActiveTab('users')}
               sx={{
-                padding: '48px',
-                textAlign: 'center',
-                backgroundColor: themeColors.bg.secondary,
-                border: `1px solid ${themeColors.border.primary}`,
-                borderRadius: '8px',
+                padding: '8px 16px',
+                backgroundColor: activeTab === 'users' ? themeColors.accent.blueGradient : 'transparent',
+                color: activeTab === 'users' ? '#ffffff' : themeColors.text.secondary,
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              <Box sx={{ marginBottom: '16px', color: themeColors.text.secondary }}>
-                <PersonIcon size={48} />
-              </Box>
-              <Box
-                sx={{
-                  fontSize: '18px',
-                  fontWeight: 500,
-                  color: themeColors.text.primary,
-                  marginBottom: '8px',
-                }}
-              >
-                No pending approvals
-              </Box>
-              <Box sx={{ fontSize: '14px', color: themeColors.text.secondary }}>
-                All user registrations have been processed
-              </Box>
+              <PersonIcon size={16} />
+              Пользователи
+              {pendingUsers.length > 0 && (
+                <Box
+                  sx={{
+                    backgroundColor: '#ff4444',
+                    color: '#ffffff',
+                    borderRadius: '10px',
+                    padding: '2px 8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {pendingUsers.length}
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          {/* Content */}
+          {loading ? (
+            <Box sx={{ textAlign: 'center', padding: '48px', color: themeColors.text.secondary }}>
+              Загрузка...
             </Box>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {pendingUsers.map((user) => (
-                <UserCard
-                  key={user.id}
-                  user={user}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  themeColors={themeColors}
-                />
-              ))}
-            </Box>
+            <>
+              {/* Organizations Tab */}
+              {activeTab === 'organizations' && (
+                pendingOrgs.length === 0 ? (
+                  <EmptyState
+                    icon={<OrganizationIcon size={48} />}
+                    title="Нет заявок от организаций"
+                    description="Все заявки на регистрацию организаций обработаны"
+                    themeColors={themeColors}
+                  />
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {pendingOrgs.map((org) => (
+                      <OrganizationCard
+                        key={org.id}
+                        org={org}
+                        onApprove={handleApproveOrg}
+                        onReject={handleRejectOrg}
+                        themeColors={themeColors}
+                      />
+                    ))}
+                  </Box>
+                )
+              )}
+
+              {/* Users Tab */}
+              {activeTab === 'users' && (
+                pendingUsers.length === 0 ? (
+                  <EmptyState
+                    icon={<PersonIcon size={48} />}
+                    title="Нет заявок от пользователей"
+                    description="Все личные регистрации обработаны"
+                    themeColors={themeColors}
+                  />
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {pendingUsers.map((user) => (
+                      <UserCard
+                        key={user.id}
+                        user={user}
+                        onApprove={handleApproveUser}
+                        onReject={handleRejectUser}
+                        themeColors={themeColors}
+                      />
+                    ))}
+                  </Box>
+                )
+              )}
+            </>
           )}
         </Box>
       </Box>
@@ -220,15 +323,145 @@ export function AdminPage() {
   );
 }
 
-// User card component
-interface UserCardProps {
+// Empty state component
+function EmptyState({
+  icon,
+  title,
+  description,
+  themeColors,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  themeColors: any;
+}) {
+  return (
+    <Box
+      sx={{
+        padding: '48px',
+        textAlign: 'center',
+        backgroundColor: themeColors.bg.secondary,
+        border: `1px solid ${themeColors.border.primary}`,
+        borderRadius: '8px',
+      }}
+    >
+      <Box sx={{ marginBottom: '16px', color: themeColors.text.secondary }}>{icon}</Box>
+      <Box sx={{ fontSize: '18px', fontWeight: 500, color: themeColors.text.primary, marginBottom: '8px' }}>
+        {title}
+      </Box>
+      <Box sx={{ fontSize: '14px', color: themeColors.text.secondary }}>{description}</Box>
+    </Box>
+  );
+}
+
+// Organization card
+function OrganizationCard({
+  org,
+  onApprove,
+  onReject,
+  themeColors,
+}: {
+  org: PendingOrganization;
+  onApprove: (id: number) => void;
+  onReject: (id: number, name: string) => void;
+  themeColors: any;
+}) {
+  return (
+    <Box
+      sx={{
+        padding: '20px',
+        backgroundColor: themeColors.bg.secondary,
+        border: `1px solid ${themeColors.border.primary}`,
+        borderRadius: '8px',
+      }}
+    >
+      {/* Organization name */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+        <OrganizationIcon size={20} />
+        <Box sx={{ fontSize: '18px', fontWeight: 600, color: themeColors.text.primary }}>
+          {org.name}
+        </Box>
+      </Box>
+
+      {/* Owner info */}
+      <Box sx={{ marginBottom: '16px', padding: '12px', backgroundColor: themeColors.bg.tertiary, borderRadius: '6px' }}>
+        <Box sx={{ fontSize: '12px', color: themeColors.text.tertiary, marginBottom: '4px' }}>
+          Администратор организации:
+        </Box>
+        <Box sx={{ fontSize: '14px', fontWeight: 500, color: themeColors.text.primary }}>
+          {org.owner_full_name || 'Без имени'}
+        </Box>
+        <Box sx={{ fontSize: '13px', color: themeColors.text.secondary }}>
+          {org.owner_email}
+        </Box>
+      </Box>
+
+      {/* Date and actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <Box sx={{ fontSize: '12px', color: themeColors.text.tertiary }}>
+          Заявка от {new Date(org.created_at).toLocaleString('ru-RU')}
+        </Box>
+        <Box sx={{ display: 'flex', gap: '8px' }}>
+          <Box
+            as="button"
+            onClick={() => onApprove(org.id)}
+            sx={{
+              padding: '8px 20px',
+              backgroundColor: themeColors.accent.green,
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              '&:hover': { opacity: 0.9 },
+            }}
+          >
+            <CheckIcon size={14} />
+            Подтвердить
+          </Box>
+          <Box
+            as="button"
+            onClick={() => onReject(org.id, org.name)}
+            sx={{
+              padding: '8px 20px',
+              backgroundColor: 'transparent',
+              color: themeColors.text.secondary,
+              border: `1px solid ${themeColors.border.primary}`,
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              '&:hover': { backgroundColor: themeColors.accent.red, borderColor: themeColors.accent.red, color: '#ffffff' },
+            }}
+          >
+            <XIcon size={14} />
+            Отклонить
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// User card
+function UserCard({
+  user,
+  onApprove,
+  onReject,
+  themeColors,
+}: {
   user: User;
   onApprove: (userId: string) => void;
   onReject: (userId: string, email: string) => void;
-  themeColors: (typeof colors)['dark'] | (typeof colors)['light'];
-}
-
-function UserCard({ user, onApprove, onReject, themeColors }: UserCardProps) {
+  themeColors: any;
+}) {
   return (
     <Box
       sx={{
@@ -243,42 +476,22 @@ function UserCard({ user, onApprove, onReject, themeColors }: UserCardProps) {
         flexWrap: 'wrap',
       }}
     >
-      {/* Left: User info */}
       <Box sx={{ flex: 1, minWidth: '200px' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <PersonIcon size={16} />
-          <Box
-            sx={{
-              fontSize: '14px',
-              fontWeight: 500,
-              color: themeColors.text.primary,
-            }}
-          >
-            {user.full_name}
+          <Box sx={{ fontSize: '14px', fontWeight: 500, color: themeColors.text.primary }}>
+            {user.full_name || 'Без имени'}
           </Box>
         </Box>
-        <Box
-          sx={{
-            fontSize: '13px',
-            color: themeColors.text.secondary,
-            marginBottom: '4px',
-          }}
-        >
+        <Box sx={{ fontSize: '13px', color: themeColors.text.secondary, marginBottom: '4px' }}>
           {user.email}
         </Box>
-        <Box
-          sx={{
-            fontSize: '12px',
-            color: themeColors.text.tertiary,
-          }}
-        >
-          Registered: {new Date(user.created_at).toLocaleString()}
+        <Box sx={{ fontSize: '12px', color: themeColors.text.tertiary }}>
+          {new Date(user.created_at).toLocaleString('ru-RU')}
         </Box>
       </Box>
 
-      {/* Right: Actions */}
       <Box sx={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-        {/* Approve button */}
         <Box
           as="button"
           onClick={() => onApprove(user.id)}
@@ -294,16 +507,12 @@ function UserCard({ user, onApprove, onReject, themeColors }: UserCardProps) {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            '&:hover': {
-              opacity: 0.9,
-            },
+            '&:hover': { opacity: 0.9 },
           }}
         >
           <CheckIcon size={14} />
-          Approve
+          Подтвердить
         </Box>
-
-        {/* Reject button */}
         <Box
           as="button"
           onClick={() => onReject(user.id, user.email)}
@@ -319,15 +528,11 @@ function UserCard({ user, onApprove, onReject, themeColors }: UserCardProps) {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            '&:hover': {
-              backgroundColor: themeColors.accent.red,
-              borderColor: themeColors.accent.red,
-              color: '#ffffff',
-            },
+            '&:hover': { backgroundColor: themeColors.accent.red, borderColor: themeColors.accent.red, color: '#ffffff' },
           }}
         >
           <XIcon size={14} />
-          Reject
+          Отклонить
         </Box>
       </Box>
     </Box>

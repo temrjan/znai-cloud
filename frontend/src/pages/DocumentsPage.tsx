@@ -34,6 +34,7 @@ export function DocumentsPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [visibility, setVisibility] = useState<'private' | 'organization'>('private');
 
   useEffect(() => {
     loadData();
@@ -75,7 +76,7 @@ export function DocumentsPage() {
     setError('');
 
     try {
-      await documentsApi.upload(file);
+      await documentsApi.upload(file, visibility);
       await loadData();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to upload document');
@@ -239,6 +240,24 @@ export function DocumentsPage() {
               >
                 <UploadIcon size={16} />
                 {uploading ? 'Uploading...' : 'Upload Document'}
+              </Box>
+              {/* Visibility selector */}
+              <Box
+                as="select"
+                value={visibility}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVisibility(e.target.value as 'private' | 'organization')}
+                sx={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${themeColors.border.primary}`,
+                  backgroundColor: themeColors.bg.primary,
+                  color: themeColors.text.primary,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="private">Личный</option>
+                <option value="organization">Для организации</option>
               </Box>
               <Box sx={{ fontSize: '12px', color: themeColors.text.secondary }}>
                 Supported: PDF, DOC, DOCX, TXT, MD

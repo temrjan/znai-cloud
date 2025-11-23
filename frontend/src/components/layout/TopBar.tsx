@@ -13,7 +13,7 @@ interface TopBarProps {
   title?: string;
 }
 
-export function TopBar({ onMenuClick, title = 'AI-Avangard' }: TopBarProps) {
+export function TopBar({ onMenuClick, title = 'Znai.cloud' }: TopBarProps) {
   const { theme } = useTheme();
   const themeColors = colors[theme];
   const user = authApi.getCurrentUser();

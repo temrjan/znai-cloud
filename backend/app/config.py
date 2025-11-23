@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     admin_password: str = "changeme"
     admin_full_name: str = "System Administrator"
 
+    # Telegram Notifications
+    telegram_bot_token: str = ""
+    telegram_owner_chat_id: str = ""
+
 
 # Global settings instance
 settings = Settings()

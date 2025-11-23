@@ -136,7 +136,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               color: themeColors.text.primary,
             }}
           >
-            AI-Avangard
+            Znai.cloud
           </Box>
           <Box
             as="button"

@@ -3,7 +3,7 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Enum, Integer, DateTime, ForeignKey
+from sqlalchemy import String, Enum, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
@@ -56,7 +56,28 @@ class User(Base):
     )
     approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # Organization fields
+    organization_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+    role_in_org: Mapped[Optional[str]] = mapped_column(
+        String(50),
+        nullable=True
+    )
+    is_platform_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+
     # Relationships
+    organization: Mapped[Optional["Organization"]] = relationship(
+        "Organization",
+        foreign_keys=[organization_id],
+        back_populates="members"
+    )
     quota: Mapped["UserQuota"] = relationship(
         "UserQuota",
         back_populates="user",
@@ -65,7 +86,8 @@ class User(Base):
     )
     documents: Mapped[list["Document"]] = relationship(
         "Document",
-        back_populates="user",
+        foreign_keys="Document.uploaded_by_user_id",
+        back_populates="uploaded_by_user",
         cascade="all, delete-orphan"
     )
     query_logs: Mapped[list["QueryLog"]] = relationship(

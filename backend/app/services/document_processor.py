@@ -130,9 +130,20 @@ class DocumentProcessor:
         filename: str,
         file_path: Path,
         mime_type: str,
+        organization_id: int | None = None,
+        visibility: str = "private",
     ) -> int:
         """
         Process and index document using Llama Index.
+
+        Args:
+            document_id: Document UUID
+            user_id: User ID who uploaded the document
+            filename: Original filename
+            file_path: Path to the file
+            mime_type: MIME type of the file
+            organization_id: Organization ID (None for personal documents)
+            visibility: 'private' or 'organization'
 
         Returns number of chunks indexed.
         """
@@ -146,14 +157,21 @@ class DocumentProcessor:
         content_type = self.detect_content_type(text, filename)
 
         # Create Llama Index Document with metadata
+        metadata = {
+            "document_id": str(document_id),
+            "user_id": user_id,
+            "filename": filename,
+            "content_type": content_type,
+            "visibility": visibility,
+        }
+
+        # Add organization_id to metadata if it's an organization document
+        if organization_id is not None:
+            metadata["organization_id"] = organization_id
+
         doc = Document(
             text=text,
-            metadata={
-                "document_id": str(document_id),
-                "user_id": user_id,
-                "filename": filename,
-                "content_type": content_type,
-            }
+            metadata=metadata
         )
 
         # Create vector store
@@ -198,7 +216,15 @@ class DocumentProcessor:
         except Exception as e:
             print(f"Warning: Failed to delete from Qdrant: {e}")
 
-    def search(self, user_id: int, query: str, limit: int = 5, score_threshold: float = 0.35) -> List[dict]:
+    def search(
+        self,
+        user_id: int,
+        query: str,
+        limit: int = 5,
+        score_threshold: float = 0.35,
+        organization_id: int | None = None,
+        search_scope: str = "all"
+    ) -> List[dict]:
         """
         Search for relevant chunks using Llama Index.
 
@@ -207,6 +233,8 @@ class DocumentProcessor:
             query: Search query
             limit: Maximum number of results
             score_threshold: Minimum similarity score (0.0-1.0), default 0.35
+            organization_id: Organization ID (None for personal mode users)
+            search_scope: 'all', 'organization', or 'private'
 
         Returns list of matching chunks with metadata.
         """
@@ -221,10 +249,38 @@ class DocumentProcessor:
             vector_store=vector_store,
         )
 
-        # Create query engine with user_id filter
-        filters = MetadataFilters(
-            filters=[ExactMatchFilter(key="user_id", value=user_id)]
-        )
+        # Build filters based on search_scope
+        filter_list = []
+
+        if search_scope == "organization":
+            # Only organization documents
+            if organization_id is not None:
+                filter_list.append(ExactMatchFilter(key="organization_id", value=organization_id))
+                filter_list.append(ExactMatchFilter(key="visibility", value="organization"))
+            else:
+                # User not in organization, return empty results
+                return []
+
+        elif search_scope == "private":
+            # Only personal documents
+            filter_list.append(ExactMatchFilter(key="user_id", value=user_id))
+            filter_list.append(ExactMatchFilter(key="visibility", value="private"))
+
+        else:  # search_scope == "all"
+            # Hybrid mode: organization docs + personal docs
+            if organization_id is not None:
+                # Note: Llama Index MetadataFilters don't support OR logic well
+                # We'll need to run two separate searches and combine results
+                # For now, we'll search organization docs (primary use case)
+                # TODO: Implement proper OR filter or run two queries
+                filter_list.append(ExactMatchFilter(key="organization_id", value=organization_id))
+                filter_list.append(ExactMatchFilter(key="visibility", value="organization"))
+            else:
+                # Personal mode: only user's documents
+                filter_list.append(ExactMatchFilter(key="user_id", value=user_id))
+                filter_list.append(ExactMatchFilter(key="visibility", value="private"))
+
+        filters = MetadataFilters(filters=filter_list) if filter_list else None
 
         query_engine = index.as_query_engine(
             similarity_top_k=limit,

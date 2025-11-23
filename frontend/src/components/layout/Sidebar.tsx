@@ -13,6 +13,7 @@ import {
   SunIcon,
   MoonIcon,
   TrashIcon,
+  SignOutIcon,
 } from '@primer/octicons-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { colors } from '../../styles/theme';
@@ -409,6 +410,36 @@ export function Sidebar({ activeSessionId, onSessionSelect, onNewChat, refreshTr
               {user?.email}
             </Box>
           </Box>
+        </Box>
+
+        {/* Logout button */}
+        <Box
+          as="button"
+          onClick={() => {
+            authApi.logout();
+            navigate('/login');
+          }}
+          sx={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            marginTop: '8px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: themeColors.text.tertiary,
+            fontSize: '13px',
+            '&:hover': {
+              backgroundColor: themeColors.bg.secondary,
+              color: themeColors.accent.red,
+            },
+          }}
+        >
+          <SignOutIcon size={16} />
+          <span>Выйти</span>
         </Box>
       </Box>
     </Box>

@@ -2,16 +2,21 @@
 Application configuration using Pydantic Settings.
 Loads from environment variables and .env file.
 """
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+
+# Get the project root directory (parent of backend/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"

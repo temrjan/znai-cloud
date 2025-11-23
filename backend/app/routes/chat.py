@@ -122,9 +122,9 @@ async def chat_query(
         db.add(session)
         await db.flush()  # Get session ID
 
-    # Determine search parameters (use org settings if available)
-    search_limit = org_settings.search_top_k if org_settings and org_settings.search_top_k else 5
-    score_threshold = org_settings.search_similarity_threshold if org_settings and org_settings.search_similarity_threshold else 0.35
+    # Determine search parameters (use defaults)
+    search_limit = 5
+    score_threshold = 0.35
 
     # Search for relevant chunks
     search_results = document_processor.search(

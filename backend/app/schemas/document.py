@@ -10,7 +10,7 @@ class DocumentResponse(BaseModel):
     """Document response model."""
 
     id: UUID
-    user_id: int
+    uploaded_by_user_id: int
     filename: str
     file_path: str | None = None
     file_size: int | None = None

@@ -14,6 +14,7 @@ import {
   ShieldLockIcon,
   PlusIcon,
   TrashIcon,
+  SignOutIcon,
 } from '@primer/octicons-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { colors } from '../../styles/theme';
@@ -465,6 +466,36 @@ export function MobileSidebar({
             >
               {user?.full_name || 'User'}
             </Box>
+          </Box>
+
+          {/* Logout button */}
+          <Box
+            as="button"
+            onClick={() => {
+              authApi.logout();
+              navigate('/login');
+              onClose();
+            }}
+            sx={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px',
+              marginTop: '12px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              color: themeColors.text.secondary,
+              '&:hover': {
+                backgroundColor: themeColors.bg.secondary,
+                color: themeColors.accent.red,
+              },
+            }}
+          >
+            <SignOutIcon size={20} />
+            <Box sx={{ fontSize: '14px' }}>Выйти</Box>
           </Box>
         </Box>
       </Box>

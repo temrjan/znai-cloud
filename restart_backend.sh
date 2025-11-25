@@ -1,10 +1,19 @@
 #!/bin/bash
-# Restart backend to apply Telegram notification changes
-# Run with: sudo bash /home/temrjan/ai-avangard/restart_backend.sh
+# Restart AI-Avangard Backend
 
-echo "Restarting AI-Avangard backend..."
-systemctl restart ai-avangard-backend 2>/dev/null || supervisorctl restart ai-avangard 2>/dev/null || echo "Note: Please restart backend manually"
-echo "Done!"
+echo "Stopping existing backend..."
+pkill -f "uvicorn backend.app.main:app" || true
+sleep 2
+
+echo "Starting backend..."
+cd /home/temrjan/ai-avangard
+source venv/bin/activate
+nohup uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload > logs/backend.log 2>&1 &
+sleep 3
+
+echo "Checking status..."
+curl -s http://localhost:8000/health || echo "Health check failed"
+
 echo ""
-echo "To test: Register a new user at http://temrjan.com/register"
-echo "You should receive a Telegram notification."
+echo "Backend logs (last 20 lines):"
+tail -20 logs/backend.log

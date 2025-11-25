@@ -5,9 +5,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from backend.app.database import get_db
 from backend.app.models.user import User, UserStatus
+from backend.app.models.organization_member import OrganizationMember
 from backend.app.utils.security import decode_access_token
 
 
@@ -49,8 +51,12 @@ async def get_current_user(
             detail="Invalid token payload",
         )
 
-    # Get user from database
-    result = await db.execute(select(User).where(User.id == user_id))
+    # Get user from database with memberships eagerly loaded
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.memberships))
+        .where(User.id == user_id)
+    )
     user = result.scalar_one_or_none()
 
     if user is None:
@@ -120,7 +126,7 @@ async def require_org_admin(
             detail="This action requires organization membership",
         )
 
-    if current_user.role_in_org not in ['admin', 'owner']:
+    if not current_user.is_org_admin_or_owner():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This action requires admin or owner role in the organization",
@@ -150,7 +156,7 @@ async def require_org_owner(
             detail="This action requires organization membership",
         )
 
-    if current_user.role_in_org != 'owner':
+    if not current_user.is_org_owner():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This action requires organization owner role",

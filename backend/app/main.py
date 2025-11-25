@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import settings
-from backend.app.routes import health, auth, documents, chat, quota, admin, organizations, chat_sessions
+from backend.app.routes import health, auth, documents, chat, quota, admin, organizations, chat_sessions, feedback, invites
 
 
 @asynccontextmanager
@@ -51,6 +51,8 @@ app.include_router(quota.router)
 app.include_router(admin.router)
 app.include_router(organizations.router)
 app.include_router(chat_sessions.router)
+app.include_router(feedback.router)
+app.include_router(invites.router)
 
 
 @app.get("/")

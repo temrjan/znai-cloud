@@ -333,39 +333,12 @@ export function Sidebar({ activeSessionId, onSessionSelect, onNewChat, refreshTr
           flexShrink: 0,
         }}
       >
-        {/* Theme toggle */}
-        <Box
-          as="button"
-          onClick={toggleTheme}
-          sx={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '8px 12px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            color: themeColors.text.secondary,
-            fontSize: '14px',
-            '&:hover': {
-              backgroundColor: themeColors.bg.secondary,
-              color: themeColors.text.primary,
-            },
-          }}
-        >
-          {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
-          <span>{theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</span>
-        </Box>
-
         {/* User info */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            marginTop: '12px',
             padding: '8px',
             borderRadius: '6px',
             '&:hover': {
@@ -420,6 +393,33 @@ export function Sidebar({ activeSessionId, onSessionSelect, onNewChat, refreshTr
               {user?.email}
             </Box>
           </Box>
+        </Box>
+
+        {/* Theme toggle */}
+        <Box
+          as="button"
+          onClick={toggleTheme}
+          sx={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '8px 12px',
+            marginTop: '12px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: themeColors.text.secondary,
+            fontSize: '14px',
+            '&:hover': {
+              backgroundColor: themeColors.bg.secondary,
+              color: themeColors.text.primary,
+            },
+          }}
+        >
+          {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+          <span>{theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</span>
         </Box>
 
         {/* Logout button */}

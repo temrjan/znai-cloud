@@ -1,7 +1,10 @@
-"""Authentication routes."""
+"""Authentication routes with rate limiting."""
+import time
+from collections import defaultdict
 from datetime import datetime
+from typing import Dict, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -22,14 +25,67 @@ from backend.app.services.telegram import notify_new_organization, notify_new_pe
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+# Simple in-memory rate limiter
+class RateLimiter:
+    """Simple rate limiter using sliding window."""
+
+    def __init__(self, max_requests: int, window_seconds: int):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.requests: Dict[str, list] = defaultdict(list)
+
+    def is_allowed(self, key: str) -> Tuple[bool, int]:
+        """Check if request is allowed. Returns (allowed, retry_after_seconds)."""
+        now = time.time()
+        window_start = now - self.window_seconds
+
+        # Clean old requests
+        self.requests[key] = [t for t in self.requests[key] if t > window_start]
+
+        if len(self.requests[key]) >= self.max_requests:
+            oldest = min(self.requests[key])
+            retry_after = int(oldest + self.window_seconds - now) + 1
+            return False, retry_after
+
+        self.requests[key].append(now)
+        return True, 0
+
+
+# Rate limiters for different endpoints
+login_limiter = RateLimiter(max_requests=5, window_seconds=60)  # 5 per minute
+register_limiter = RateLimiter(max_requests=3, window_seconds=60)  # 3 per minute
+
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP from request."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(
+    user_data: UserCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """
     Register a new user.
 
     If organization_name is provided, creates organization and user becomes owner (auto-approved).
     Otherwise, user status will be 'pending' and requires admin approval.
     """
+    # Rate limiting
+    client_ip = get_client_ip(request)
+    allowed, retry_after = register_limiter.is_allowed(client_ip)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many registration attempts. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     # Check if email already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
     existing_user = result.scalar_one_or_none()
@@ -241,12 +297,27 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(
+    user_data: UserLogin,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """
     Login user and return JWT token.
 
     User must be approved by admin to login.
+    Rate limited to 5 attempts per minute per IP.
     """
+    # Rate limiting
+    client_ip = get_client_ip(request)
+    allowed, retry_after = login_limiter.is_allowed(client_ip)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many login attempts. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     # Find user by email
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()

@@ -1,13 +1,15 @@
 """Database connection and session management."""
 from typing import AsyncGenerator
 
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from backend.app.config import settings
 
 
-# Async engine
+# Async engine for FastAPI
 if settings.debug:
     engine = create_async_engine(
         settings.database_url,
@@ -22,11 +24,27 @@ else:
         max_overflow=settings.postgres_max_overflow,
     )
 
-# Session factory
+# Async session factory for FastAPI
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+
+# Sync engine for Celery tasks
+sync_engine = create_engine(
+    settings.sync_database_url,
+    echo=settings.debug,
+    pool_size=5,
+    max_overflow=0,
+)
+
+# Sync session factory for Celery
+SessionLocal = sessionmaker(
+    bind=sync_engine,
     autocommit=False,
     autoflush=False,
 )

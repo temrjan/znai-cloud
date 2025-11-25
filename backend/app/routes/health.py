@@ -61,3 +61,15 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         redis=redis_ok,
         qdrant=qdrant_ok,
     )
+
+
+@router.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus metrics endpoint."""
+    from fastapi.responses import Response
+    from backend.app.utils.metrics import get_metrics, get_content_type
+    
+    return Response(
+        content=get_metrics(),
+        media_type=get_content_type()
+    )

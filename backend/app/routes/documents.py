@@ -1,6 +1,7 @@
 """Document management routes."""
 import hashlib
 import shutil
+import logging
 from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
@@ -17,23 +18,25 @@ from backend.app.models.quota import UserQuota
 from backend.app.schemas.document import DocumentResponse
 from backend.app.middleware.auth import get_current_user
 from backend.app.services.document_processor import document_processor
+from backend.app.tasks.document_tasks import index_document_task, delete_document_task
+from backend.app.utils.cache import SearchCache
 from backend.app.config import settings
 
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
-UPLOAD_DIR = Path("/home/temrjan/ai-avangard/uploads")
+UPLOAD_DIR = Path(settings.upload_dir)
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 ALLOWED_TYPES = {
     "application/pdf",
     "text/plain",
     "text/markdown",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
-ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".doc", ".docx"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md"}
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -54,7 +57,7 @@ async def upload_document(
     if file.content_type not in ALLOWED_TYPES and file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type not supported. Allowed: PDF, TXT, MD, DOC, DOCX",
+            detail="Формат файла не поддерживается. Разрешены: PDF, TXT, MD",
         )
 
     # Validate visibility
@@ -156,6 +159,19 @@ async def upload_document(
     await db.commit()
     await db.refresh(document)
 
+    # Queue async indexing task
+    index_document_task.delay(
+        document_id=document.id,
+        document_uuid=str(document.id),
+        user_id=current_user.id,
+        filename=document.filename,
+        file_path=document.file_path,
+        mime_type=document.mime_type,
+        organization_id=document.organization_id,
+        visibility=document.visibility,
+    )
+    logger.info(f"Queued indexing task for document {document.id}")
+
     return document
 
 
@@ -253,18 +269,21 @@ async def index_document(
         document.status = DocumentStatus.PROCESSING
         await db.commit()
 
-        chunks_count = document_processor.index_document(
+        # Queue async indexing task
+        index_document_task.delay(
             document_id=document.id,
+            document_uuid=str(document.id),
             user_id=current_user.id,
+            filename=document.filename,
+            file_path=document.file_path,
+            mime_type=document.mime_type,
             organization_id=document.organization_id,
             visibility=document.visibility,
-            filename=document.filename,
-            file_path=Path(document.file_path),
-            mime_type=document.mime_type,
         )
-
-        document.status = DocumentStatus.INDEXED
-        document.chunks_count = chunks_count
+        logger.info(f"Queued indexing task for document {document_id}")
+        
+        # Return immediately - document will be indexed in background
+        # Status remains PROCESSING until Celery task completes
 
     except Exception as e:
         document.status = DocumentStatus.FAILED
@@ -277,6 +296,19 @@ async def index_document(
 
     await db.commit()
     await db.refresh(document)
+
+    # Queue async indexing task
+    index_document_task.delay(
+        document_id=document.id,
+        document_uuid=str(document.id),
+        user_id=current_user.id,
+        filename=document.filename,
+        file_path=document.file_path,
+        mime_type=document.mime_type,
+        organization_id=document.organization_id,
+        visibility=document.visibility,
+    )
+    logger.info(f"Queued indexing task for document {document.id}")
     return document
 
 
@@ -315,7 +347,7 @@ async def delete_document(
         # Organization document
         if document.organization_id == current_user.organization_id:
             # Same organization
-            if current_user.role_in_org in ['owner', 'admin']:
+            if current_user.is_org_admin_or_owner():
                 # Admins/owners can delete any org document
                 can_delete = True
             elif document.uploaded_by_user_id == current_user.id:
@@ -328,18 +360,28 @@ async def delete_document(
             detail="You don't have permission to delete this document",
         )
 
+    # Save IDs for cache invalidation
+    user_id = document.uploaded_by_user_id
+    org_id = document.organization_id
+
     # Delete from Qdrant
     try:
         document_processor.delete_document(str(document.id))
     except Exception as e:
-        print(f"Warning: Failed to delete from Qdrant: {e}")
+        logger.warning(f"Failed to delete from Qdrant: {e}")
 
     # Delete file
     try:
         Path(document.file_path).unlink(missing_ok=True)
     except Exception as e:
-        print(f"Warning: Failed to delete file: {e}")
+        logger.warning(f"Failed to delete file: {e}")
 
     # Delete from database
     await db.delete(document)
     await db.commit()
+
+    # Invalidate search cache after deleting document
+    SearchCache.invalidate_user(user_id)
+    if org_id:
+        SearchCache.invalidate_org(org_id)
+    logger.info(f"Cache invalidated after deleting document {document_id}")

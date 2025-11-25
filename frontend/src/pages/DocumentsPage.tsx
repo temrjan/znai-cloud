@@ -210,7 +210,7 @@ export function DocumentsPage() {
               id="file-upload"
               onChange={handleFileUpload}
               disabled={uploading || (quota?.current_documents ?? 0) >= (quota?.max_documents ?? 5)}
-              accept=".pdf,.doc,.docx,.txt,.md"
+              accept=".pdf,.txt,.md"
               style={{ display: 'none' }}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -260,7 +260,7 @@ export function DocumentsPage() {
                 <option value="organization">Для организации</option>
               </Box>
               <Box sx={{ fontSize: '12px', color: themeColors.text.secondary }}>
-                Supported: PDF, DOC, DOCX, TXT, MD
+                Форматы: PDF, TXT, MD
               </Box>
             </Box>
           </Box>

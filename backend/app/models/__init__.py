@@ -10,6 +10,7 @@ from backend.app.models.organization_member import OrganizationMember
 from backend.app.models.organization_settings import OrganizationSettings
 from backend.app.models.chat_session import ChatSession
 from backend.app.models.chat_message import ChatMessage, MessageRole
+from backend.app.models.feedback import Feedback
 
 __all__ = [
     "Base",

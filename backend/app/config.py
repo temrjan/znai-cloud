@@ -86,7 +86,7 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., description="OpenAI API key")
     openai_embedding_model: str = "text-embedding-3-large"
     openai_embedding_dimensions: int = 3072
-    openai_llm_model: str = "gpt-4o"
+    openai_llm_model: str = "gpt-4o-mini"
     openai_max_tokens: int = 2000
     openai_temperature: float = 0.3
     openai_timeout: int = 30
@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     free_user_max_documents: int = 5
     free_user_max_queries_daily: int = 100
     max_file_size_mb: int = 10
-    allowed_extensions: List[str] = [".pdf", ".txt", ".md", ".docx"]
+    allowed_extensions: List[str] = [".pdf", ".txt", ".md"]
 
     # System Capacity
     max_total_users: int = 100
@@ -109,6 +109,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
     log_file: str = "logs/backend.log"
+    
+    # File Storage
+    upload_dir: str = "/home/temrjan/ai-avangard/uploads"
 
     # Admin
     admin_email: str = "admin@ai-avangard.local"

@@ -1,12 +1,16 @@
 """User model."""
 import enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import String, Enum, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
+
+if TYPE_CHECKING:
+    from backend.app.models.organization import Organization
+    from backend.app.models.organization_member import OrganizationMember
 
 
 class UserStatus(str, enum.Enum):
@@ -78,6 +82,12 @@ class User(Base):
         foreign_keys=[organization_id],
         back_populates="members"
     )
+    memberships: Mapped[list["OrganizationMember"]] = relationship(
+        "OrganizationMember",
+        foreign_keys="OrganizationMember.user_id",
+        back_populates="user",
+        lazy="selectin"
+    )
     quota: Mapped["UserQuota"] = relationship(
         "UserQuota",
         back_populates="user",
@@ -101,6 +111,31 @@ class User(Base):
         cascade="all, delete-orphan",
         order_by="desc(ChatSession.updated_at)"
     )
+
+    def get_org_role(self) -> Optional[str]:
+        """
+        Get user's role in their current organization.
+        Prefers OrganizationMember.role, falls back to role_in_org for compatibility.
+        """
+        if self.organization_id is None:
+            return None
+
+        # Check memberships (loaded via selectin)
+        for membership in self.memberships:
+            if membership.organization_id == self.organization_id:
+                return membership.role
+
+        # Fallback to legacy field
+        return self.role_in_org
+
+    def is_org_admin_or_owner(self) -> bool:
+        """Check if user is admin or owner in their organization."""
+        role = self.get_org_role()
+        return role in ['admin', 'owner']
+
+    def is_org_owner(self) -> bool:
+        """Check if user is owner of their organization."""
+        return self.get_org_role() == 'owner'
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, status={self.status})>"

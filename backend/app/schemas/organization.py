@@ -36,25 +36,27 @@ class OrganizationResponse(BaseModel):
     id: int
     name: str
     slug: str
-    owner_id: Optional[int]
+    owner_id: Optional[int] = None
     max_members: int
-    current_members_count: int
     max_documents: int
-    current_documents_count: int
-    max_queries_daily: int
-    status: OrganizationStatus
+    max_queries_org_daily: int = Field(alias="max_queries_daily", default=500)
+    status: str
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
+    # Computed fields - set after model_validate
+    current_members_count: int = 0
+    current_documents_count: int = 0
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class OrganizationMemberResponse(BaseModel):
     """Schema for organization member info."""
     user_id: int
     email: str
-    full_name: Optional[str]
+    full_name: Optional[str] = None
     role: str
     joined_at: datetime
 

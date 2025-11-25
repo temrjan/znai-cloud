@@ -19,13 +19,13 @@ class InviteResponse(BaseModel):
     id: int
     code: UUID
     organization_id: int
-    organization_name: str
+    organization_name: Optional[str] = None  # Optional - may not be loaded
     max_uses: int
     used_count: int
     expires_at: datetime
     status: InviteStatus
     default_role: str
-    created_by_user_id: Optional[int]
+    created_by_user_id: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -39,8 +39,10 @@ class InviteAcceptRequest(BaseModel):
 
 class InviteDetailsResponse(BaseModel):
     """Schema for public invite details (before accepting)."""
-    code: UUID
     organization_name: str
-    expires_at: datetime
-    is_valid: bool
-    remaining_uses: int
+    default_role: str = "member"
+    expires_at: Optional[datetime] = None
+    is_valid: bool = False
+
+    class Config:
+        from_attributes = True

@@ -1,0 +1,58 @@
+"""Organization settings service."""
+from typing import Dict, Any, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from backend.app.models.organization_settings import OrganizationSettings
+
+
+class SettingsService:
+    """Service for managing organization settings."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_by_org_id(self, organization_id: int) -> Optional[OrganizationSettings]:
+        """Get settings for an organization."""
+        result = await self.db.execute(
+            select(OrganizationSettings).where(
+                OrganizationSettings.organization_id == organization_id
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_or_create(self, organization_id: int) -> OrganizationSettings:
+        """Get or create default settings for an organization."""
+        settings = await self.get_by_org_id(organization_id)
+        
+        if not settings:
+            settings = OrganizationSettings(organization_id=organization_id)
+            self.db.add(settings)
+            await self.db.flush()
+        
+        return settings
+
+    async def update(
+        self,
+        organization_id: int,
+        updates: Dict[str, Any],
+        updated_by_user_id: int,
+    ) -> OrganizationSettings:
+        """Update organization settings."""
+        settings = await self.get_or_create(organization_id)
+        
+        for field, value in updates.items():
+            if hasattr(settings, field):
+                setattr(settings, field, value)
+        
+        settings.updated_by_user_id = updated_by_user_id
+        return settings
+
+    async def get_custom_model(self, organization_id: int) -> Optional[str]:
+        """Get custom model setting if enabled."""
+        settings = await self.get_by_org_id(organization_id)
+        
+        if settings and settings.custom_model_enabled and settings.custom_model_name:
+            return settings.custom_model_name
+        
+        return None

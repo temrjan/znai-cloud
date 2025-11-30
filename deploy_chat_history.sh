@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy chat history feature
-# Run with: sudo bash /home/temrjan/ai-avangard/deploy_chat_history.sh
+# Run with: sudo bash /home/temrjan/znai-cloud/deploy_chat_history.sh
 
 set -e
 
@@ -41,14 +41,14 @@ echo "   ✓ Migration complete"
 # 2. Deploy frontend
 echo ""
 echo "[2/4] Deploying frontend..."
-cp -r /home/temrjan/ai-avangard/frontend/dist/* /var/www/ai-avangard/
-chown -R www-data:www-data /var/www/ai-avangard/
+cp -r /home/temrjan/znai-cloud/frontend/dist/* /var/www/znai-cloud/
+chown -R www-data:www-data /var/www/znai-cloud/
 echo "   ✓ Frontend deployed"
 
 # 3. Restart backend
 echo ""
 echo "[3/4] Restarting backend..."
-systemctl restart ai-avangard-backend
+systemctl restart znai-cloud-backend
 sleep 2
 echo "   ✓ Backend restarted"
 

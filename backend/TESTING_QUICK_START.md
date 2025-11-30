@@ -3,7 +3,7 @@
 ## Установка
 
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 pip install -r requirements-dev.txt
 ```
 

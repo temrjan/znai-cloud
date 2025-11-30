@@ -20,7 +20,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-PROJECT_DIR="/home/temrjan/ai-avangard"
+PROJECT_DIR="/home/temrjan/znai-cloud"
 USER="temrjan"
 
 # Database credentials (can be overridden via environment)
@@ -199,4 +199,4 @@ echo "  systemctl status redis-server"
 echo "  systemctl status qdrant"
 echo "  systemctl status nginx"
 
-echo -e "\n${GREEN}Installation log saved to: /var/log/ai-avangard-install.log${NC}"
+echo -e "\n${GREEN}Installation log saved to: /var/log/znai-cloud-install.log${NC}"

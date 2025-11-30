@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fix znai.cloud - comprehensive fix
-# Run with: sudo bash /home/temrjan/ai-avangard/fix_znai_v2.sh
+# Run with: sudo bash /home/temrjan/znai-cloud/fix_znai_v2.sh
 
 set -e
 
@@ -13,9 +13,9 @@ echo ""
 echo "=== Fixing Config ==="
 
 # Disable old config to avoid conflicts
-if [ -f /etc/nginx/sites-enabled/ai-avangard.conf ]; then
-    echo "Disabling old ai-avangard.conf to avoid port conflicts..."
-    rm -f /etc/nginx/sites-enabled/ai-avangard.conf
+if [ -f /etc/nginx/sites-enabled/znai-cloud.conf ]; then
+    echo "Disabling old znai-cloud.conf to avoid port conflicts..."
+    rm -f /etc/nginx/sites-enabled/znai-cloud.conf
 fi
 
 # Rewrite znai-cloud.conf completely
@@ -45,7 +45,7 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     # Frontend
-    root /var/www/ai-avangard;
+    root /var/www/znai-cloud;
     index index.html;
 
     # Gzip

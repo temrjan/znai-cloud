@@ -1,6 +1,6 @@
 #!/bin/bash
 # Установка Playwright с зависимостями
-# sudo bash /home/temrjan/ai-avangard/install_playwright.sh
+# sudo bash /home/temrjan/znai-cloud/install_playwright.sh
 
 set -e
 

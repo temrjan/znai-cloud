@@ -1,6 +1,6 @@
 #!/bin/bash
 # Migration script: temrjan.com -> znai.cloud
-# Run with: sudo bash /home/temrjan/ai-avangard/migrate_to_znai_cloud.sh
+# Run with: sudo bash /home/temrjan/znai-cloud/migrate_to_znai_cloud.sh
 
 set -e
 
@@ -14,13 +14,13 @@ NC='\033[0m'
 
 # Step 1: Backup current config
 echo -e "${YELLOW}[1/5] Backing up current nginx config...${NC}"
-cp /etc/nginx/sites-available/ai-avangard.conf /etc/nginx/sites-available/ai-avangard.conf.backup.$(date +%Y%m%d_%H%M%S)
+cp /etc/nginx/sites-available/znai-cloud.conf /etc/nginx/sites-available/znai-cloud.conf.backup.$(date +%Y%m%d_%H%M%S)
 echo -e "${GREEN}✓ Backup created${NC}"
 
 # Step 2: Read current config and show it
 echo ""
 echo -e "${YELLOW}[2/5] Current nginx config:${NC}"
-cat /etc/nginx/sites-available/ai-avangard.conf
+cat /etc/nginx/sites-available/znai-cloud.conf
 echo ""
 
 # Step 3: Create new config for znai.cloud
@@ -55,7 +55,7 @@ server {
     ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
 
     # Frontend (React)
-    root /var/www/ai-avangard/frontend;
+    root /var/www/znai-cloud/frontend;
     index index.html;
 
     # Gzip

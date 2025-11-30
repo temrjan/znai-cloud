@@ -172,7 +172,7 @@ async def test_organization(db_session, test_user):
 
 ### 1. Установка зависимостей
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
@@ -347,7 +347,7 @@ async def test_async_function():
 
 **Решение**: Запускать из директории backend
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 pytest
 ```
 

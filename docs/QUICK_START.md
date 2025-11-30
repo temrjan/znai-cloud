@@ -5,7 +5,7 @@
 ### Шаг 1: Установка системных зависимостей
 
 ```bash
-cd /home/temrjan/ai-avangard
+cd /home/temrjan/znai-cloud
 sudo ./infrastructure/scripts/setup.sh
 ```
 
@@ -315,7 +315,7 @@ make logs-postgres
 
 **Контакты:**
 - Email: x.temrjan@gmail.com
-- GitHub: temrjan/ai-avangard
+- GitHub: temrjan/znai-cloud
 
 ---
 

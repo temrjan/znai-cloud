@@ -206,7 +206,7 @@ Tests are designed to run in CI/CD pipelines:
 
 If you get import errors, ensure the backend directory is in PYTHONPATH:
 ```bash
-export PYTHONPATH="${PYTHONPATH}:/path/to/ai-avangard/backend"
+export PYTHONPATH="${PYTHONPATH}:/path/to/znai-cloud/backend"
 ```
 
 Or run from the backend directory:

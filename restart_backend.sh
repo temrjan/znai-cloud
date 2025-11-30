@@ -6,7 +6,7 @@ pkill -f "uvicorn backend.app.main:app" || true
 sleep 2
 
 echo "Starting backend..."
-cd /home/temrjan/ai-avangard
+cd /home/temrjan/znai-cloud
 source venv/bin/activate
 nohup uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload > logs/backend.log 2>&1 &
 sleep 3

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fix nginx API proxy - strip /api prefix
-# Run with: sudo bash /home/temrjan/ai-avangard/fix_nginx_api.sh
+# Run with: sudo bash /home/temrjan/znai-cloud/fix_nginx_api.sh
 
 set -e
 

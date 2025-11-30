@@ -86,10 +86,15 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., description="OpenAI API key")
     openai_embedding_model: str = "text-embedding-3-large"
     openai_embedding_dimensions: int = 3072
-    openai_llm_model: str = "gpt-4o-mini"
+    openai_llm_model: str = "gpt-4o"
     openai_max_tokens: int = 2000
     openai_temperature: float = 0.3
     openai_timeout: int = 30
+    # Gemini
+    gemini_api_key: str = Field(default="", description="Gemini API key")
+    gemini_model: str = "gemini-2.5-flash-preview-05-20"
+    use_gemini: bool = False  # Use Gemini as primary LLM
+
 
     # User Quotas
     free_user_max_documents: int = 5
@@ -111,10 +116,10 @@ class Settings(BaseSettings):
     log_file: str = "logs/backend.log"
     
     # File Storage
-    upload_dir: str = "/home/temrjan/ai-avangard/uploads"
+    upload_dir: str = "/home/temrjan/znai-cloud/uploads"
 
     # Admin
-    admin_email: str = "admin@ai-avangard.local"
+    admin_email: str = "admin@znai.cloud"
     admin_password: str = "changeme"
     admin_full_name: str = "System Administrator"
 

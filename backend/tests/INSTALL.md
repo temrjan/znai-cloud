@@ -9,7 +9,7 @@
 
 ### 1. Navigate to backend directory
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 ```
 
 ### 2. Install dependencies
@@ -84,7 +84,7 @@ Successful run should look like:
 ```
 ========================= test session starts ==========================
 platform linux -- Python 3.12.0, pytest-8.3.4, pluggy-1.5.0
-rootdir: /home/temrjan/ai-avangard/backend
+rootdir: /home/temrjan/znai-cloud/backend
 configfile: pytest.ini
 plugins: asyncio-0.25.0, cov-6.0.0
 collected 33 items
@@ -100,7 +100,7 @@ tests/unit/test_models_organization.py ........................... [100%]
 
 **Solution**: Make sure you're in the backend directory
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 pytest
 ```
 

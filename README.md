@@ -81,7 +81,7 @@ AI-Avangard - это SaaS платформа для создания персо�
 ## 📁 Структура проекта
 
 ```
-/home/temrjan/ai-avangard/
+/home/temrjan/znai-cloud/
 ├── docs/
 │   ├── ARCHITECTURE.md          # Подробная архитектура
 │   ├── API.md                   # API документация
@@ -183,9 +183,9 @@ AI-Avangard - это SaaS платформа для создания персо�
 │
 ├── infrastructure/
 │   ├── nginx/
-│   │   └── ai-avangard.conf    # Nginx конфиг
+│   │   └── znai-cloud.conf    # Nginx конфиг
 │   ├── systemd/
-│   │   ├── ai-avangard-backend.service
+│   │   ├── znai-cloud-backend.service
 │   │   └── qdrant.service
 │   └── scripts/
 │       ├── setup.sh            # Автоматическая установка
@@ -310,7 +310,7 @@ JWT_SECRET_KEY=very_long_random_string
 ### 1. Клонирование (уже сделано)
 
 ```bash
-cd /home/temrjan/ai-avangard
+cd /home/temrjan/znai-cloud
 ```
 
 ### 2. Установка зависимостей (следующий шаг)
@@ -367,7 +367,7 @@ sudo tail -f /var/log/nginx/access.log  # Nginx логи
 
 **Статус сервисов:**
 ```bash
-systemctl status ai-avangard-backend
+systemctl status znai-cloud-backend
 systemctl status qdrant
 systemctl status postgresql
 systemctl status redis

@@ -11,7 +11,7 @@ Running organization models tests...
 
 ========================= test session starts ==========================
 platform linux -- Python 3.12.0, pytest-8.3.4, pluggy-1.5.0
-rootdir: /home/temrjan/ai-avangard/backend
+rootdir: /home/temrjan/znai-cloud/backend
 configfile: pytest.ini
 plugins: asyncio-0.25.0, cov-6.0.0
 collected 33 items
@@ -63,7 +63,7 @@ Running tests with coverage report...
 
 ========================= test session starts ==========================
 platform linux -- Python 3.12.0, pytest-8.3.4, pluggy-1.5.0
-rootdir: /home/temrjan/ai-avangard/backend
+rootdir: /home/temrjan/znai-cloud/backend
 configfile: pytest.ini
 plugins: asyncio-0.25.0, cov-6.0.0
 collected 33 items
@@ -99,7 +99,7 @@ $ pytest tests/unit/test_models_organization.py::TestOrganizationModel::test_cre
 ========================= test session starts ==========================
 platform linux -- Python 3.12.0, pytest-8.3.4, pluggy-1.5.0 -- /usr/bin/python3
 cachedir: .pytest_cache
-rootdir: /home/temrjan/ai-avangard/backend
+rootdir: /home/temrjan/znai-cloud/backend
 configfile: pytest.ini
 plugins: asyncio-0.25.0, cov-6.0.0
 collected 1 item
@@ -116,7 +116,7 @@ $ pytest tests/unit/test_models_organization.py::TestOrganizationSettingsModel -
 
 ========================= test session starts ==========================
 platform linux -- Python 3.12.0, pytest-8.3.4, pluggy-1.5.0
-rootdir: /home/temrjan/ai-avangard/backend
+rootdir: /home/temrjan/znai-cloud/backend
 configfile: pytest.ini
 plugins: asyncio-0.25.0, cov-6.0.0
 collected 7 items
@@ -137,7 +137,7 @@ tests/unit/test_models_organization.py::TestOrganizationSettingsModel::test_sett
 ```bash
 ========================= test session starts ==========================
 platform linux -- Python 3.12.0, pytest-8.3.4, pluggy-1.5.0
-rootdir: /home/temrjan/ai-avangard/backend
+rootdir: /home/temrjan/znai-cloud/backend
 configfile: pytest.ini
 plugins: asyncio-0.25.0, cov-6.0.0
 collected 1 item

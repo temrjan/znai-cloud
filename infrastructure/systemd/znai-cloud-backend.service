@@ -6,9 +6,9 @@ After=network.target postgresql.service redis.service qdrant.service
 Type=simple
 User=temrjan
 Group=temrjan
-WorkingDirectory=/home/temrjan/ai-avangard
-Environment="PATH=/home/temrjan/ai-avangard/venv/bin"
-ExecStart=/home/temrjan/ai-avangard/venv/bin/uvicorn backend.app.main:app \
+WorkingDirectory=/home/temrjan/znai-cloud
+Environment="PATH=/home/temrjan/znai-cloud/venv/bin"
+ExecStart=/home/temrjan/znai-cloud/venv/bin/uvicorn backend.app.main:app \
     --host 127.0.0.1 \
     --port 8000 \
     --workers 2 \
@@ -17,8 +17,8 @@ ExecStart=/home/temrjan/ai-avangard/venv/bin/uvicorn backend.app.main:app \
 Restart=always
 RestartSec=5
 
-StandardOutput=append:/var/log/ai-avangard/backend.log
-StandardError=append:/var/log/ai-avangard/backend-error.log
+StandardOutput=append:/var/log/znai-cloud/backend.log
+StandardError=append:/var/log/znai-cloud/backend-error.log
 
 [Install]
 WantedBy=multi-user.target

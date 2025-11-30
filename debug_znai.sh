@@ -1,6 +1,6 @@
 #!/bin/bash
 # Debug znai.cloud 500 error
-# Run with: sudo bash /home/temrjan/ai-avangard/debug_znai.sh
+# Run with: sudo bash /home/temrjan/znai-cloud/debug_znai.sh
 
 echo "=== Nginx Error Log (last 30 lines) ==="
 tail -30 /var/log/nginx/error.log
@@ -15,8 +15,8 @@ cat /etc/nginx/sites-enabled/znai-cloud.conf
 
 echo ""
 echo "=== Frontend files check ==="
-ls -la /var/www/ai-avangard/
+ls -la /var/www/znai-cloud/
 
 echo ""
 echo "=== Index.html content ==="
-cat /var/www/ai-avangard/index.html
+cat /var/www/znai-cloud/index.html

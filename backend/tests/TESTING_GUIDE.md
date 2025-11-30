@@ -7,7 +7,7 @@
 ### 1. Установка зависимостей
 
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
@@ -45,7 +45,7 @@ backend/tests/
 
 ## Unit тесты организаций
 
-Файл: `/home/temrjan/ai-avangard/backend/tests/unit/test_models_organization.py`
+Файл: `/home/temrjan/znai-cloud/backend/tests/unit/test_models_organization.py`
 
 ### Что тестируется
 
@@ -351,7 +351,7 @@ async def test_organization(db_session, test_user):
 
 ### Один тест
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 pytest tests/unit/test_models_organization.py::TestOrganizationModel::test_create_organization -v
 ```
 
@@ -418,13 +418,13 @@ async def test_something(db_session):
 
 **Решение 1**: Запускать из директории backend
 ```bash
-cd /home/temrjan/ai-avangard/backend
+cd /home/temrjan/znai-cloud/backend
 pytest
 ```
 
 **Решение 2**: Добавить в PYTHONPATH
 ```bash
-export PYTHONPATH=/home/temrjan/ai-avangard/backend:$PYTHONPATH
+export PYTHONPATH=/home/temrjan/znai-cloud/backend:$PYTHONPATH
 pytest
 ```
 

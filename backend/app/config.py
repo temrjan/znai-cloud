@@ -94,7 +94,7 @@ class Settings(BaseSettings):
 
     # Together AI (Qwen)
     together_api_key: str = Field(default="", description="Together AI API key")
-    together_model: str = "Qwen/Qwen2.5-72B-Instruct-Turbo"
+    together_model: str = "Qwen/Qwen3-235B-A22B-Instruct-2507-FP8"
     together_base_url: str = "https://api.together.xyz/v1"
     use_together: bool = True  # Use Together AI as primary LLM
 

@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
@@ -49,6 +49,12 @@ class OrganizationSettings(Base):
     response_format: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     include_sources_inline: Mapped[Optional[bool]] = mapped_column(nullable=True, default=True)
     show_confidence_score: Mapped[Optional[bool]] = mapped_column(nullable=True, default=False)
+
+    # Telegram Bot Settings
+    telegram_bot_token: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    telegram_bot_enabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
+    telegram_bot_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    telegram_webhook_secret: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
     # Metadata
     created_at: Mapped[datetime] = mapped_column(

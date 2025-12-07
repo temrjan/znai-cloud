@@ -272,3 +272,127 @@ async def transfer_ownership(
         }
     except PermissionDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
+
+
+# ============================================================================
+# TELEGRAM BOT
+# ============================================================================
+
+from backend.app.services.telegram_bot import validate_bot_token, setup_bot_webhook, TelegramBotService
+# TelegramBotSetupRequest and TelegramBotResponse defined below
+from pydantic import BaseModel
+
+
+class TelegramBotSetupRequest(BaseModel):
+    """Request to setup telegram bot."""
+    bot_token: str
+
+
+class TelegramBotResponse(BaseModel):
+    """Response with telegram bot info."""
+    enabled: bool
+    bot_username: str | None = None
+    webhook_url: str | None = None
+
+
+@router.post("/my/telegram-bot", response_model=TelegramBotResponse)
+async def setup_telegram_bot(
+    request: TelegramBotSetupRequest,
+    current_user: User = Depends(require_org_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Setup Telegram bot for organization."""
+    # Validate token
+    bot_info = await validate_bot_token(request.bot_token)
+    if not bot_info:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid bot token. Please check the token and try again."
+        )
+    
+    # Setup webhook
+    base_url = "https://znai.cloud"  # TODO: move to config
+    success, result = await setup_bot_webhook(
+        request.bot_token,
+        current_user.organization_id,
+        base_url
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to setup webhook: {result}"
+        )
+    
+    # Save to settings
+    service = SettingsService(db)
+    settings = await service.update(
+        current_user.organization_id,
+        {
+            "telegram_bot_token": request.bot_token,
+            "telegram_bot_enabled": True,
+            "telegram_bot_username": bot_info.get("username"),
+            "telegram_webhook_secret": result,
+        },
+        current_user.id,
+    )
+    await db.commit()
+    
+    webhook_url = f"{base_url}/api/telegram/webhook/{current_user.organization_id}"
+    
+    return TelegramBotResponse(
+        enabled=True,
+        bot_username=bot_info.get("username"),
+        webhook_url=webhook_url
+    )
+
+
+@router.get("/my/telegram-bot", response_model=TelegramBotResponse)
+async def get_telegram_bot_status(
+    current_user: User = Depends(require_org_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get Telegram bot status for organization."""
+    service = SettingsService(db)
+    settings = await service.get_by_org_id(current_user.organization_id)
+    
+    if not settings or not settings.telegram_bot_enabled:
+        return TelegramBotResponse(enabled=False)
+    
+    webhook_url = f"https://znai.cloud/api/telegram/webhook/{current_user.organization_id}"
+    
+    return TelegramBotResponse(
+        enabled=True,
+        bot_username=settings.telegram_bot_username,
+        webhook_url=webhook_url
+    )
+
+
+@router.delete("/my/telegram-bot", status_code=status.HTTP_200_OK)
+async def disable_telegram_bot(
+    current_user: User = Depends(require_org_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Disable Telegram bot for organization."""
+    service = SettingsService(db)
+    settings = await service.get_by_org_id(current_user.organization_id)
+    
+    if settings and settings.telegram_bot_token:
+        # Delete webhook
+        bot = TelegramBotService(settings.telegram_bot_token)
+        await bot.delete_webhook()
+        
+        # Clear settings
+        await service.update(
+            current_user.organization_id,
+            {
+                "telegram_bot_token": None,
+                "telegram_bot_enabled": False,
+                "telegram_bot_username": None,
+                "telegram_webhook_secret": None,
+            },
+            current_user.id,
+        )
+        await db.commit()
+    
+    return {"message": "Telegram bot disabled"}

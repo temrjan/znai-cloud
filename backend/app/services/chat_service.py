@@ -1,10 +1,9 @@
-"""Chat service for LLM interactions (Gemini/OpenAI)."""
+"""Chat service for LLM interactions (Together AI / OpenAI)."""
 import logging
 import re
 from typing import List, Dict, Optional
 
 from openai import OpenAI
-import google.generativeai as genai
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from backend.app.config import settings
@@ -60,16 +59,20 @@ def strip_markdown(text: str) -> str:
 
 
 class ChatService:
-    """Service for chat generation using Gemini (primary) or OpenAI (fallback)."""
+    """Service for chat generation using Together AI (primary) or OpenAI (fallback)."""
 
     def __init__(self):
+        # OpenAI client (fallback)
         self.openai_client = OpenAI(api_key=settings.openai_api_key)
 
-        self.gemini_model = None
-        if settings.gemini_api_key:
-            genai.configure(api_key=settings.gemini_api_key)
-            self.gemini_model = genai.GenerativeModel(settings.gemini_model)
-            logger.info(f"Gemini initialized with model: {settings.gemini_model}")
+        # Together AI client (primary for Qwen)
+        self.together_client = None
+        if settings.together_api_key:
+            self.together_client = OpenAI(
+                base_url=settings.together_base_url,
+                api_key=settings.together_api_key
+            )
+            logger.info(f"Together AI initialized with model: {settings.together_model}")
 
     @retry(
         stop=stop_after_attempt(3),
@@ -85,82 +88,44 @@ class ChatService:
         max_tokens: int,
     ) -> str:
         """Generate response from LLM with retry logic."""
-        if settings.use_gemini and self.gemini_model and not model.startswith('o1'):
-            return self._call_gemini(messages, temperature, max_tokens)
+        # Priority 1: Together AI (Qwen)
+        if settings.use_together and self.together_client:
+            return self._call_together(messages, temperature, max_tokens)
 
-        if model.startswith('o1'):
-            response = self._call_o1_model(messages, model, max_tokens)
-        else:
-            response = self.openai_client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+        # Priority 2: OpenAI (fallback)
+        response = self.openai_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
 
         self._track_usage(response, model)
         return strip_markdown(response.choices[0].message.content)
 
-    def _call_gemini(self, messages: List[Dict], temperature: float, max_tokens: int) -> str:
-        """Call Gemini API."""
-        system_prompt = ""
-        conversation = []
-
-        for msg in messages:
-            if msg['role'] == 'system':
-                system_prompt = msg['content']
-            elif msg['role'] == 'user':
-                conversation.append({'role': 'user', 'parts': [msg['content']]})
-            elif msg['role'] == 'assistant':
-                conversation.append({'role': 'model', 'parts': [msg['content']]})
-
-        generation_config = genai.types.GenerationConfig(
-            temperature=temperature,
-            max_output_tokens=max_tokens,
-        )
-
-        chat = self.gemini_model.start_chat(history=conversation[:-1] if len(conversation) > 1 else [])
-
-        user_message = conversation[-1]['parts'][0] if conversation else ""
-        if system_prompt:
-            full_prompt = f"System Instructions: {system_prompt}\n\nUser Query: {user_message}"
-        else:
-            full_prompt = user_message
-
-        response = chat.send_message(full_prompt, generation_config=generation_config)
-
-        logger.info(f"Gemini response generated, model: {settings.gemini_model}")
-        OPENAI_REQUESTS.labels(model=settings.gemini_model, status="success").inc()
-
-        return strip_markdown(response.text)
-
-    def _call_o1_model(self, messages: List[Dict], model: str, max_tokens: int):
-        """Handle o1 model specifics (no temperature, convert system to user)."""
-        converted_messages = []
-        system_content = None
-
-        for msg in messages:
-            if msg['role'] == 'system':
-                system_content = msg['content']
-            else:
-                converted_messages.append(msg)
-
-        if system_content and converted_messages:
-            first_user_idx = next(
-                (i for i, m in enumerate(converted_messages) if m['role'] == 'user'),
-                None
-            )
-            if first_user_idx is not None:
-                converted_messages[first_user_idx]['content'] = (
-                    "Instructions: " + system_content + "\n\n" +
-                    converted_messages[first_user_idx]['content']
-                )
-
-        return self.openai_client.chat.completions.create(
+    def _call_together(self, messages: List[Dict], temperature: float, max_tokens: int) -> str:
+        """Call Together AI API with Qwen model."""
+        model = settings.together_model
+        
+        response = self.together_client.chat.completions.create(
             model=model,
-            messages=converted_messages,
-            max_completion_tokens=max_tokens,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
+
+        # Track usage
+        if response.usage:
+            OPENAI_TOKENS.labels(model=model, type="prompt").inc(response.usage.prompt_tokens)
+            OPENAI_TOKENS.labels(model=model, type="completion").inc(response.usage.completion_tokens)
+            logger.info(
+                f"Together AI usage: model={model}, "
+                f"prompt_tokens={response.usage.prompt_tokens}, "
+                f"completion_tokens={response.usage.completion_tokens}"
+            )
+        OPENAI_REQUESTS.labels(model=model, status="success").inc()
+
+        return strip_markdown(response.choices[0].message.content)
 
     def _track_usage(self, response, model: str):
         """Track token usage in Prometheus metrics."""

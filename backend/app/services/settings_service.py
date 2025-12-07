@@ -6,6 +6,12 @@ from sqlalchemy import select
 from backend.app.models.organization_settings import OrganizationSettings
 
 
+# Mapping frontend field names to model field names
+FIELD_MAPPING = {
+    "response_language": "primary_language",
+}
+
+
 class SettingsService:
     """Service for managing organization settings."""
 
@@ -42,8 +48,10 @@ class SettingsService:
         settings = await self.get_or_create(organization_id)
         
         for field, value in updates.items():
-            if hasattr(settings, field):
-                setattr(settings, field, value)
+            # Map frontend field names to model field names
+            model_field = FIELD_MAPPING.get(field, field)
+            if hasattr(settings, model_field):
+                setattr(settings, model_field, value)
         
         settings.updated_by_user_id = updated_by_user_id
         return settings
@@ -52,7 +60,7 @@ class SettingsService:
         """Get custom model setting if enabled."""
         settings = await self.get_by_org_id(organization_id)
         
-        if settings and settings.custom_model_enabled and settings.custom_model_name:
-            return settings.custom_model_name
+        if settings and settings.custom_model:
+            return settings.custom_model
         
         return None

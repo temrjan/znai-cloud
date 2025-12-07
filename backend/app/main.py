@@ -2,13 +2,19 @@
 AI-Avangard FastAPI Application
 Multi-tenant RAG platform for personal knowledge bases
 """
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from backend.app.config import settings
 from backend.app.routes import health, auth, documents, chat, quota, admin, organizations, chat_sessions, feedback, invites
+from backend.app.routes import telegram_webhook
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -33,6 +39,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Log validation errors for debugging."""
+    logger.error(f"Validation error on {request.url}: {exc.errors()}")
+    print(f"VALIDATION ERROR: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()}
+    )
+
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -53,6 +71,7 @@ app.include_router(organizations.router)
 app.include_router(chat_sessions.router)
 app.include_router(feedback.router)
 app.include_router(invites.router)
+app.include_router(telegram_webhook.router)
 
 
 @app.get("/")

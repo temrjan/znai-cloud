@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class OrganizationSettingsUpdate(BaseModel):
     """Schema for updating organization AI settings."""
-    custom_system_prompt: Optional[str] = Field(None, max_length=4000)
+    custom_system_prompt: Optional[str] = Field(None, max_length=16000)
     custom_temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
     custom_top_p: Optional[float] = Field(None, ge=0.0, le=1.0)
     custom_max_tokens: Optional[int] = Field(None, ge=100, le=32000)
@@ -57,7 +57,7 @@ class OrganizationSettingsResponse(BaseModel):
 
 class PromptTestRequest(BaseModel):
     """Schema for testing custom system prompt."""
-    system_prompt: str = Field(..., min_length=10, max_length=4000)
+    system_prompt: str = Field(..., min_length=10, max_length=16000)
     test_query: str = Field(..., min_length=5, max_length=500)
 
 

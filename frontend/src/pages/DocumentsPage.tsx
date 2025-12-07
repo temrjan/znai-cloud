@@ -86,15 +86,6 @@ export function DocumentsPage() {
     }
   };
 
-  const handleIndex = async (id: string) => {
-    try {
-      await documentsApi.index(id);
-      await loadData();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to index document');
-    }
-  };
-
   const handleDelete = async (id: string, filename: string) => {
     if (!confirm(`Delete "${filename}"?`)) return;
 
@@ -310,7 +301,6 @@ export function DocumentsPage() {
                 <DocumentCard
                   key={doc.id}
                   document={doc}
-                  onIndex={handleIndex}
                   onDelete={handleDelete}
                   themeColors={themeColors}
                 />
@@ -326,12 +316,11 @@ export function DocumentsPage() {
 // Document card component
 interface DocumentCardProps {
   document: Document;
-  onIndex: (id: string) => void;
   onDelete: (id: string, filename: string) => void;
   themeColors: (typeof colors)['dark'] | (typeof colors)['light'];
 }
 
-function DocumentCard({ document: doc, onIndex, onDelete, themeColors }: DocumentCardProps) {
+function DocumentCard({ document: doc, onDelete, themeColors }: DocumentCardProps) {
   const getStatusDisplay = () => {
     switch (doc.status) {
       case DocumentStatus.PROCESSING:
@@ -420,33 +409,6 @@ function DocumentCard({ document: doc, onIndex, onDelete, themeColors }: Documen
 
       {/* Right: Actions */}
       <Box sx={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-        {/* Index button - show only for PROCESSING or FAILED */}
-        {(doc.status === DocumentStatus.PROCESSING || doc.status === DocumentStatus.FAILED) && (
-          <Box
-            as="button"
-            onClick={() => onIndex(doc.id)}
-            sx={{
-              padding: '6px 12px',
-              background: themeColors.accent.blueGradient,
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              '&:hover': {
-                opacity: 0.9,
-              },
-            }}
-          >
-            <SyncIcon size={14} />
-            {doc.status === DocumentStatus.FAILED ? 'Retry' : 'Index'}
-          </Box>
-        )}
-
         {/* Delete button */}
         <Box
           as="button"

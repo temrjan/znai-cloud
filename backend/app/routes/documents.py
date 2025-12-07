@@ -21,6 +21,7 @@ from backend.app.services.document_processor import document_processor
 from backend.app.tasks.document_tasks import index_document_task, delete_document_task
 from backend.app.utils.cache import SearchCache
 from backend.app.config import settings
+from backend.app.utils.transliterate import transliterate_filename
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,10 @@ async def upload_document(
             detail="Cannot upload organization documents without being in an organization",
         )
 
+    # Transliterate Cyrillic filename to Latin for consistent storage
+    original_filename = file.filename
+    safe_filename = transliterate_filename(original_filename)
+    
     # Calculate file hash
     file_content = await file.read()
     file_hash = hashlib.sha256(file_content).hexdigest()
@@ -137,16 +142,16 @@ async def upload_document(
                 detail=f"Personal document limit reached ({max_docs} documents)",
             )
 
-    # Save file
-    file_path = UPLOAD_DIR / f"{current_user.id}_{file_hash}_{file.filename}"
+    # Save file with transliterated filename
+    file_path = UPLOAD_DIR / f"{current_user.id}_{file_hash}_{safe_filename}"
     with file_path.open("wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    # Create document record
+    # Create document record (store transliterated filename)
     document = Document(
         uploaded_by_user_id=current_user.id,
         organization_id=current_user.organization_id if visibility == "organization" else None,
-        filename=file.filename,
+        filename=safe_filename,
         file_path=str(file_path),
         file_hash=file_hash,
         file_size=len(file_content),
@@ -364,9 +369,9 @@ async def delete_document(
     user_id = document.uploaded_by_user_id
     org_id = document.organization_id
 
-    # Delete from Qdrant
+    # Delete from Qdrant (with filename fallback for legacy documents)
     try:
-        document_processor.delete_document(str(document.id))
+        document_processor.delete_document(str(document.id), filename=document.filename)
     except Exception as e:
         logger.warning(f"Failed to delete from Qdrant: {e}")
 

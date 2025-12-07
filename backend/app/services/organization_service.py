@@ -106,7 +106,12 @@ class OrganizationService:
         self.db.add(member)
 
         # Create default settings
-        settings = OrganizationSettings(organization_id=organization.id)
+        settings = OrganizationSettings(
+            organization_id=organization.id,
+            custom_max_tokens=1000,
+            custom_temperature=0.5,
+            primary_language="ru"
+        )
         self.db.add(settings)
 
         return organization

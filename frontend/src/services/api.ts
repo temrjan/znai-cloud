@@ -259,3 +259,22 @@ export const organizationsApi = {
     return response.data;
   },
 };
+
+// Telegram Bot
+export const telegramBotApi = {
+  getStatus: async (): Promise<{ enabled: boolean; bot_username: string | null; webhook_url: string | null }> => {
+    const response = await api.get<{ enabled: boolean; bot_username: string | null; webhook_url: string | null }>("/organizations/my/telegram-bot");
+    return response.data;
+  },
+
+  setup: async (botToken: string): Promise<{ enabled: boolean; bot_username: string | null; webhook_url: string | null }> => {
+    const response = await api.post<{ enabled: boolean; bot_username: string | null; webhook_url: string | null }>("/organizations/my/telegram-bot", {
+      bot_token: botToken
+    });
+    return response.data;
+  },
+
+  disable: async (): Promise<void> => {
+    await api.delete("/organizations/my/telegram-bot");
+  },
+};

@@ -3,7 +3,7 @@
  * Height: 56px, sticky position
  */
 import { Box } from '../common/Box';
-import { ThreeBarsIcon, SearchIcon, BellIcon } from '@primer/octicons-react';
+import { ThreeBarsIcon } from '@primer/octicons-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { colors } from '../../styles/theme';
 import { authApi } from '../../services/api';
@@ -37,7 +37,7 @@ export function TopBar({ onMenuClick, title = 'Znai.cloud' }: TopBarProps) {
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
       }}
     >
-      {/* Left side: Hamburger menu + Logo + Title */}
+      {/* Left side: Hamburger menu + Title */}
       <Box
         sx={{
           display: 'flex',
@@ -86,71 +86,13 @@ export function TopBar({ onMenuClick, title = 'Znai.cloud' }: TopBarProps) {
         </Box>
       </Box>
 
-      {/* Right side: Search + Notifications + Avatar */}
+      {/* Right side: Avatar only */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
         }}
       >
-        <Box
-          as="button"
-          sx={{
-            background: 'transparent',
-            border: 'none',
-            padding: '8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: themeColors.text.secondary,
-            '&:hover': {
-              color: themeColors.text.primary,
-              backgroundColor: themeColors.bg.secondary,
-              borderRadius: '6px',
-            },
-          }}
-          aria-label="Search"
-        >
-          <SearchIcon size={20} />
-        </Box>
-
-        <Box
-          as="button"
-          sx={{
-            background: 'transparent',
-            border: 'none',
-            padding: '8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: themeColors.text.secondary,
-            position: 'relative',
-            '&:hover': {
-              color: themeColors.text.primary,
-              backgroundColor: themeColors.bg.secondary,
-              borderRadius: '6px',
-            },
-          }}
-          aria-label="Notifications"
-        >
-          <BellIcon size={20} />
-          {/* Notification badge */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '6px',
-              right: '6px',
-              width: '8px',
-              height: '8px',
-              backgroundColor: themeColors.accent.red,
-              borderRadius: '50%',
-            }}
-          />
-        </Box>
-
         <Box
           as="button"
           sx={{

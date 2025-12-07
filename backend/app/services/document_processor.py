@@ -3,6 +3,7 @@ from typing import List, Dict, Tuple, Optional
 from pathlib import Path
 import os
 import logging
+import unicodedata
 
 from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
 from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
@@ -11,8 +12,8 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core.node_parser import SentenceSplitter
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams
-from sentence_transformers import CrossEncoder
+from qdrant_client.models import Distance, VectorParams, Filter, FilterSelector, FieldCondition, MatchValue
+# from sentence_transformers import CrossEncoder  # Disabled - slow on CPU
 
 from backend.app.config import settings
 from backend.app.utils.query_expander import expand_query
@@ -208,10 +209,12 @@ class DocumentProcessor:
         text_splitter = self._create_splitter(content_type)
 
         # Create Llama Index Document with metadata
+        # Normalize filename to NFC to ensure consistent Unicode representation
+        normalized_filename = unicodedata.normalize('NFC', filename)
         metadata = {
-            "document_id": str(document_id),
+            "pg_document_id": str(document_id),
             "user_id": user_id,
-            "filename": filename,
+            "filename": normalized_filename,
             "content_type": content_type,
             "visibility": visibility,
         }
@@ -252,22 +255,59 @@ class DocumentProcessor:
 
         return chunks_count
 
-    def delete_document(self, document_id: str):
-        """Delete all chunks for a document from Qdrant."""
+    def delete_document(self, document_id: str, filename: str = None):
+        """Delete all chunks for a document from Qdrant.
+        
+        Uses pg_document_id for new documents, falls back to filename for legacy.
+        """
+        deleted = False
+        
+        # Try deleting by pg_document_id first (new documents)
         try:
-            self.qdrant_client.delete(
+            result = self.qdrant_client.delete(
                 collection_name=self.collection_name,
-                points_selector={
-                    "filter": {
-                        "must": [
-                            {"key": "document_id", "match": {"value": str(document_id)}}
+                points_selector=FilterSelector(
+                    filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="pg_document_id",
+                                match=MatchValue(value=str(document_id))
+                            )
                         ]
-                    }
-                },
+                    )
+                )
             )
-            logger.info(f"Deleted document {document_id} from index")
+            logger.info(f"Deleted document {document_id} by pg_document_id from index. Result: {result}")
+            deleted = True
         except Exception as e:
-            logger.warning(f"Failed to delete from Qdrant: {e}")
+            logger.warning(f"Failed to delete by pg_document_id: {e}")
+        
+        # Fallback: delete by filename (for legacy documents without pg_document_id)
+        if filename:
+            # Try both NFC and NFD normalized forms due to Unicode inconsistencies
+            for norm_form in ['NFC', 'NFD']:
+                try:
+                    normalized_filename = unicodedata.normalize(norm_form, filename)
+                    result = self.qdrant_client.delete(
+                        collection_name=self.collection_name,
+                        points_selector=FilterSelector(
+                            filter=Filter(
+                                must=[
+                                    FieldCondition(
+                                        key="filename",
+                                        match=MatchValue(value=normalized_filename)
+                                    )
+                                ]
+                            )
+                        )
+                    )
+                    logger.info(f"Deleted document by filename '{filename}' ({norm_form}) from index. Result: {result}")
+                    deleted = True
+                except Exception as e:
+                    logger.warning(f"Failed to delete by filename ({norm_form}): {e}")
+        
+        if not deleted:
+            logger.warning(f"Could not delete document {document_id} from Qdrant")
 
     def _rerank_results(self, query: str, results: List[dict], top_n: int = 5) -> List[dict]:
         """
@@ -324,7 +364,7 @@ class DocumentProcessor:
                 results.append({
                     "text": node.text,
                     "filename": node.metadata.get("filename", "Unknown"),
-                    "document_id": node.metadata.get("document_id", ""),
+                    "document_id": node.metadata.get("pg_document_id", ""),
                     "content_type": node.metadata.get("content_type", "general"),
                     "score": score,
                 })

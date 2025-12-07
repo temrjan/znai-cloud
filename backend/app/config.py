@@ -87,13 +87,15 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-large"
     openai_embedding_dimensions: int = 3072
     openai_llm_model: str = "gpt-4o"
-    openai_max_tokens: int = 2000
+    openai_max_tokens: int = 1000
     openai_temperature: float = 0.3
     openai_timeout: int = 30
-    # Gemini
-    gemini_api_key: str = Field(default="", description="Gemini API key")
-    gemini_model: str = "gemini-2.5-flash-preview-05-20"
-    use_gemini: bool = False  # Use Gemini as primary LLM
+    
+    # Together AI (Qwen)
+    together_api_key: str = Field(default="", description="Together AI API key")
+    together_model: str = "Qwen/Qwen2.5-72B-Instruct-Turbo"
+    together_base_url: str = "https://api.together.xyz/v1"
+    use_together: bool = True  # Use Together AI as primary LLM
 
 
     # User Quotas

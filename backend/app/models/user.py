@@ -1,9 +1,10 @@
 """User model."""
 import enum
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import String, Enum, Integer, DateTime, ForeignKey, Boolean
+from sqlalchemy.sql import func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
@@ -35,7 +36,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     status: Mapped[UserStatus] = mapped_column(
         Enum(UserStatus),
@@ -49,7 +50,7 @@ class User(Base):
         nullable=False
     )
 
-    approved_by_id: Mapped[Optional[int]] = mapped_column(
+    approved_by_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"),
         nullable=True
     )
@@ -58,15 +59,15 @@ class User(Base):
         default=datetime.utcnow,
         nullable=False
     )
-    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Organization fields
-    organization_id: Mapped[Optional[int]] = mapped_column(
+    organization_id: Mapped[int | None] = mapped_column(
         ForeignKey("organizations.id", ondelete="SET NULL"),
         nullable=True,
         index=True
     )
-    role_in_org: Mapped[Optional[str]] = mapped_column(
+    role_in_org: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True
     )
@@ -112,7 +113,7 @@ class User(Base):
         order_by="desc(ChatSession.updated_at)"
     )
 
-    def get_org_role(self) -> Optional[str]:
+    def get_org_role(self) -> str | None:
         """
         Get user's role in their current organization.
         Prefers OrganizationMember.role, falls back to role_in_org for compatibility.

@@ -3,7 +3,8 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Enum
+from sqlalchemy.sql import func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
@@ -55,7 +56,7 @@ class Organization(Base):
         onupdate=datetime.utcnow,
         nullable=False
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     owner: Mapped["User"] = relationship(

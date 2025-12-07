@@ -87,7 +87,7 @@ def expand_query(query: str, max_expansions: int = 3) -> str:
     query_lower = query.lower()
     words = query_lower.split()
 
-    expansions: Set[str] = set()
+    expansions: set[str] = set()
 
     # Check each word against synonym map
     for word in words:
@@ -115,7 +115,7 @@ def expand_query(query: str, max_expansions: int = 3) -> str:
     return query
 
 
-def get_query_variations(query: str) -> List[str]:
+def get_query_variations(query: str) -> list[str]:
     """
     Generate multiple query variations for multi-query retrieval.
 

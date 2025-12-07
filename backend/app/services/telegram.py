@@ -1,5 +1,6 @@
 """Telegram notification service."""
 import httpx
+
 from backend.app.config import settings
 
 

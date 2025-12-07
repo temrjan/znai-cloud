@@ -4,8 +4,9 @@ Loads from environment variables and .env file.
 """
 from pathlib import Path
 from typing import List
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Get the project root directory (parent of backend/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -80,7 +81,7 @@ class Settings(BaseSettings):
     secret_key: str = Field(..., description="Additional secret key")
 
     # CORS
-    cors_origins: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # OpenAI
     openai_api_key: str = Field(..., description="OpenAI API key")
@@ -90,7 +91,7 @@ class Settings(BaseSettings):
     openai_max_tokens: int = 1000
     openai_temperature: float = 0.3
     openai_timeout: int = 30
-    
+
     # Together AI (Qwen)
     together_api_key: str = Field(default="", description="Together AI API key")
     together_model: str = "Qwen/Qwen2.5-72B-Instruct-Turbo"
@@ -102,7 +103,7 @@ class Settings(BaseSettings):
     free_user_max_documents: int = 5
     free_user_max_queries_daily: int = 100
     max_file_size_mb: int = 10
-    allowed_extensions: List[str] = [".pdf", ".txt", ".md"]
+    allowed_extensions: list[str] = [".pdf", ".txt", ".md"]
 
     # System Capacity
     max_total_users: int = 100
@@ -116,7 +117,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
     log_file: str = "logs/backend.log"
-    
+
     # File Storage
     upload_dir: str = "/home/temrjan/znai-cloud/uploads"
 

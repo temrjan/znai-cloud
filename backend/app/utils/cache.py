@@ -1,8 +1,9 @@
 """Redis caching utilities for RAG queries."""
-import json
 import hashlib
+import json
 import logging
-from typing import Optional, Any
+from typing import Any, Optional
+
 import redis
 
 from backend.app.config import settings
@@ -10,7 +11,7 @@ from backend.app.config import settings
 logger = logging.getLogger(__name__)
 
 # Redis client singleton
-_redis_client: Optional[redis.Redis] = None
+_redis_client: redis.Redis | None = None
 
 
 def get_redis_client() -> redis.Redis:
@@ -39,12 +40,12 @@ def make_cache_key(prefix: str, *args) -> str:
 
 class SearchCache:
     """Cache for RAG search results."""
-    
+
     TTL_SECONDS = 3600  # 1 hour cache
     PREFIX = "rag_search"
-    
+
     @classmethod
-    def get(cls, user_id: int, query: str, org_id: Optional[int], scope: str) -> Optional[list]:
+    def get(cls, user_id: int, query: str, org_id: int | None, scope: str) -> list | None:
         """Get cached search results."""
         try:
             client = get_redis_client()
@@ -58,9 +59,9 @@ class SearchCache:
         except Exception as e:
             logger.warning(f"Redis cache get error: {e}")
             return None
-    
+
     @classmethod
-    def set(cls, user_id: int, query: str, org_id: Optional[int], scope: str, results: list) -> None:
+    def set(cls, user_id: int, query: str, org_id: int | None, scope: str, results: list) -> None:
         """Cache search results."""
         try:
             client = get_redis_client()
@@ -69,7 +70,7 @@ class SearchCache:
             logger.debug(f"Cached search results: {query[:30]}...")
         except Exception as e:
             logger.warning(f"Redis cache set error: {e}")
-    
+
     @classmethod
     def invalidate_user(cls, user_id: int) -> None:
         """Invalidate all cache for a user (when they upload new document)."""
@@ -82,7 +83,7 @@ class SearchCache:
                 logger.info(f"Invalidated {len(keys)} cache keys for user {user_id}")
         except Exception as e:
             logger.warning(f"Redis cache invalidate error: {e}")
-    
+
     @classmethod
     def invalidate_org(cls, organization_id: int) -> None:
         """Invalidate cache for all users in organization."""

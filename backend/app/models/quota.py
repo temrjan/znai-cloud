@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import Integer, Date, ForeignKey, CheckConstraint
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
@@ -23,7 +23,7 @@ class UserQuota(Base):
 
     max_queries_daily: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
     queries_today: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    last_query_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    last_query_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Personal quota limits
     personal_max_documents: Mapped[int] = mapped_column(Integer, default=5, nullable=False)

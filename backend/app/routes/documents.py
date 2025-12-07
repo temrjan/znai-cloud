@@ -1,28 +1,27 @@
 """Document management routes."""
 import hashlib
-import shutil
 import logging
+import shutil
 from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func, or_
 
+from backend.app.config import settings
 from backend.app.database import get_db
-from backend.app.models.user import User
+from backend.app.middleware.auth import get_current_user
 from backend.app.models.document import Document, DocumentStatus
 from backend.app.models.organization import Organization
 from backend.app.models.quota import UserQuota
+from backend.app.models.user import User
 from backend.app.schemas.document import DocumentResponse
-from backend.app.middleware.auth import get_current_user
 from backend.app.services.document_processor import document_processor
-from backend.app.tasks.document_tasks import index_document_task, delete_document_task
+from backend.app.tasks.document_tasks import delete_document_task, index_document_task
 from backend.app.utils.cache import SearchCache
-from backend.app.config import settings
 from backend.app.utils.transliterate import transliterate_filename
-
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +70,7 @@ async def upload_document(
     # Transliterate Cyrillic filename to Latin for consistent storage
     original_filename = file.filename
     safe_filename = transliterate_filename(original_filename)
-    
+
     # Calculate file hash
     file_content = await file.read()
     file_hash = hashlib.sha256(file_content).hexdigest()
@@ -180,9 +179,9 @@ async def upload_document(
     return document
 
 
-@router.get("", response_model=List[DocumentResponse])
+@router.get("", response_model=list[DocumentResponse])
 async def list_documents(
-    scope: Optional[str] = Query(default="all", regex="^(all|organization|private)$"),
+    scope: str | None = Query(default="all", regex="^(all|organization|private)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -286,7 +285,7 @@ async def index_document(
             visibility=document.visibility,
         )
         logger.info(f"Queued indexing task for document {document_id}")
-        
+
         # Return immediately - document will be indexed in background
         # Status remains PROCESSING until Celery task completes
 

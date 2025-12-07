@@ -1,26 +1,25 @@
 """Chat sessions routes."""
+import json
 from datetime import datetime, timedelta
 from typing import List
-import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete
 
 from backend.app.database import get_db
-from backend.app.models.user import User
-from backend.app.models.chat_session import ChatSession
-from backend.app.models.chat_message import ChatMessage, MessageRole
-from backend.app.schemas.chat_session import (
-    ChatSessionCreate,
-    ChatSessionUpdate,
-    ChatSessionResponse,
-    ChatSessionWithMessages,
-    ChatSessionListResponse,
-    ChatMessageResponse,
-)
 from backend.app.middleware.auth import get_current_user
-
+from backend.app.models.chat_message import ChatMessage, MessageRole
+from backend.app.models.chat_session import ChatSession
+from backend.app.models.user import User
+from backend.app.schemas.chat_session import (
+    ChatMessageResponse,
+    ChatSessionCreate,
+    ChatSessionListResponse,
+    ChatSessionResponse,
+    ChatSessionUpdate,
+    ChatSessionWithMessages,
+)
 
 router = APIRouter(prefix="/chat-sessions", tags=["Chat Sessions"])
 

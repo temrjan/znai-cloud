@@ -1,6 +1,7 @@
 """Chat session schemas."""
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -8,14 +9,14 @@ class ChatMessageBase(BaseModel):
     """Base chat message schema."""
     role: str
     content: str
-    sources: Optional[List[str]] = None
+    sources: list[str] | None = None
 
 
 class ChatMessageCreate(BaseModel):
     """Schema for creating a chat message (internal use)."""
     role: str
     content: str
-    sources: Optional[str] = None  # JSON string
+    sources: str | None = None  # JSON string
 
 
 class ChatMessageResponse(BaseModel):
@@ -23,7 +24,7 @@ class ChatMessageResponse(BaseModel):
     id: int
     role: str
     content: str
-    sources: Optional[List[str]] = None
+    sources: list[str] | None = None
     created_at: datetime
 
     class Config:
@@ -32,7 +33,7 @@ class ChatMessageResponse(BaseModel):
 
 class ChatSessionCreate(BaseModel):
     """Schema for creating a chat session."""
-    title: Optional[str] = Field(None, max_length=100)
+    title: str | None = Field(None, max_length=100)
 
 
 class ChatSessionUpdate(BaseModel):
@@ -46,7 +47,7 @@ class ChatSessionResponse(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
-    message_count: Optional[int] = 0
+    message_count: int | None = 0
 
     class Config:
         from_attributes = True
@@ -54,10 +55,10 @@ class ChatSessionResponse(BaseModel):
 
 class ChatSessionWithMessages(ChatSessionResponse):
     """Chat session with messages."""
-    messages: List[ChatMessageResponse] = []
+    messages: list[ChatMessageResponse] = []
 
 
 class ChatSessionListResponse(BaseModel):
     """List of chat sessions."""
-    sessions: List[ChatSessionResponse]
+    sessions: list[ChatSessionResponse]
     total: int

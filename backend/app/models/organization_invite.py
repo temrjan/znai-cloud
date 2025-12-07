@@ -4,7 +4,8 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Enum
+from sqlalchemy.sql import func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,9 +42,9 @@ class OrganizationInvite(Base):
         nullable=False
     )
 
-    max_uses: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    max_uses: Mapped[int | None] = mapped_column(Integer, nullable=True)
     used_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     default_role: Mapped[str] = mapped_column(String(50), default="member", nullable=False)
     status: Mapped[str] = mapped_column(
         String(20),

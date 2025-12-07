@@ -1,15 +1,16 @@
 """Feedback schemas."""
-from typing import Optional
-from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
 
 
 class FeedbackCreate(BaseModel):
     """Schema for creating feedback."""
     message_id: int
     is_helpful: bool
-    comment: Optional[str] = None
-    category: Optional[str] = None  # 'incorrect', 'incomplete', 'irrelevant', 'outdated', 'other'
+    comment: str | None = None
+    category: str | None = None  # 'incorrect', 'incomplete', 'irrelevant', 'outdated', 'other'
 
 
 class FeedbackResponse(BaseModel):
@@ -17,8 +18,8 @@ class FeedbackResponse(BaseModel):
     id: int
     message_id: int
     is_helpful: bool
-    comment: Optional[str] = None
-    category: Optional[str] = None
+    comment: str | None = None
+    category: str | None = None
     created_at: datetime
 
     class Config:

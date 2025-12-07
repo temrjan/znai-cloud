@@ -1,16 +1,15 @@
 """Feedback routes for RAG quality tracking."""
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.database import get_db
-from backend.app.models.user import User
+from backend.app.middleware.auth import get_current_user
 from backend.app.models.chat_message import ChatMessage
 from backend.app.models.feedback import Feedback
+from backend.app.models.user import User
 from backend.app.schemas.feedback import FeedbackCreate, FeedbackResponse
-from backend.app.middleware.auth import get_current_user
 from backend.app.utils.metrics import FEEDBACK_COUNT
-
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
 
@@ -32,13 +31,13 @@ async def submit_feedback(
         select(ChatMessage).where(ChatMessage.id == feedback_data.message_id)
     )
     message = message_result.scalar_one_or_none()
-    
+
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Message not found"
         )
-    
+
     # Check if feedback already exists for this message from this user
     existing_result = await db.execute(
         select(Feedback).where(
@@ -47,7 +46,7 @@ async def submit_feedback(
         )
     )
     existing = existing_result.scalar_one_or_none()
-    
+
     if existing:
         # Update existing feedback
         existing.is_helpful = feedback_data.is_helpful
@@ -55,13 +54,13 @@ async def submit_feedback(
         existing.category = feedback_data.category
         await db.commit()
         await db.refresh(existing)
-        
+
         # Update metric
         rating = "positive" if feedback_data.is_helpful else "negative"
         FEEDBACK_COUNT.labels(rating=rating).inc()
-        
+
         return FeedbackResponse.model_validate(existing)
-    
+
     # Create new feedback
     feedback = Feedback(
         message_id=feedback_data.message_id,
@@ -73,11 +72,11 @@ async def submit_feedback(
     db.add(feedback)
     await db.commit()
     await db.refresh(feedback)
-    
+
     # Update metric
     rating = "positive" if feedback_data.is_helpful else "negative"
     FEEDBACK_COUNT.labels(rating=rating).inc()
-    
+
     return FeedbackResponse.model_validate(feedback)
 
 
@@ -90,24 +89,24 @@ async def get_feedback_stats(
     Get feedback statistics (admin only for now).
     """
     from sqlalchemy import func
-    
+
     # Get total counts
     total_result = await db.execute(select(func.count(Feedback.id)))
     total = total_result.scalar() or 0
-    
+
     positive_result = await db.execute(
         select(func.count(Feedback.id)).where(Feedback.is_helpful == True)
     )
     positive = positive_result.scalar() or 0
-    
+
     negative_result = await db.execute(
         select(func.count(Feedback.id)).where(Feedback.is_helpful == False)
     )
     negative = negative_result.scalar() or 0
-    
+
     # Calculate satisfaction rate
     satisfaction_rate = (positive / total * 100) if total > 0 else 0
-    
+
     return {
         "total_feedback": total,
         "positive": positive,

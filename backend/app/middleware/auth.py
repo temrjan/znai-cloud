@@ -2,16 +2,15 @@
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.database import get_db
-from backend.app.models.user import User, UserStatus
 from backend.app.models.organization_member import OrganizationMember
+from backend.app.models.user import User, UserStatus
 from backend.app.utils.security import decode_access_token
-
 
 security = HTTPBearer()
 
@@ -44,7 +43,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user_id: Optional[int] = payload.get("user_id")
+    user_id: int | None = payload.get("user_id")
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

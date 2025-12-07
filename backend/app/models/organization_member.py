@@ -2,7 +2,8 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, DateTime, ForeignKey
+from sqlalchemy.sql import func
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
@@ -31,8 +32,8 @@ class OrganizationMember(Base):
         default=datetime.utcnow,
         nullable=False
     )
-    left_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    invited_by_user_id: Mapped[Optional[int]] = mapped_column(
+    left_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    invited_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )

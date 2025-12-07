@@ -4,9 +4,18 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, BigInteger, DateTime, ForeignKey, Enum, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
 
@@ -33,20 +42,20 @@ class Document(Base):
         nullable=False,
         index=True
     )
-    organization_id: Mapped[Optional[int]] = mapped_column(
+    organization_id: Mapped[int | None] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
         index=True
     )
 
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
-    file_size: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    file_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # SHA256
-    mime_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    file_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    file_size: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    file_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)  # SHA256
+    mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     chunks_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    error_message: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     visibility: Mapped[str] = mapped_column(
         String(50),
         default="private",
@@ -63,7 +72,7 @@ class Document(Base):
         default=datetime.utcnow,
         nullable=False
     )
-    indexed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     uploaded_by_user: Mapped["User"] = relationship(

@@ -1,8 +1,9 @@
 """Telegram Bot Service for RAG assistants."""
 import logging
 import secrets
+from typing import Any, Dict, Optional
+
 import httpx
-from typing import Optional, Dict, Any
 
 from backend.app.config import settings
 
@@ -18,7 +19,7 @@ class TelegramBotService:
         self.bot_token = bot_token
         self.api_base = f"{TELEGRAM_API_BASE}{bot_token}"
 
-    async def get_me(self) -> Optional[Dict[str, Any]]:
+    async def get_me(self) -> dict[str, Any] | None:
         """Get bot info to validate token."""
         try:
             async with httpx.AsyncClient() as client:
@@ -75,7 +76,7 @@ class TelegramBotService:
         chat_id: int,
         text: str,
         parse_mode: str = "HTML",
-        reply_to_message_id: Optional[int] = None
+        reply_to_message_id: int | None = None
     ) -> bool:
         """Send message to a chat."""
         try:
@@ -124,7 +125,7 @@ def generate_webhook_secret() -> str:
     return secrets.token_hex(32)
 
 
-async def validate_bot_token(token: str) -> Optional[Dict[str, Any]]:
+async def validate_bot_token(token: str) -> dict[str, Any] | None:
     """Validate bot token and return bot info."""
     service = TelegramBotService(token)
     return await service.get_me()
@@ -137,19 +138,19 @@ async def setup_bot_webhook(token: str, org_id: int, base_url: str) -> tuple[boo
         tuple: (success, webhook_secret or error_message)
     """
     service = TelegramBotService(token)
-    
+
     # Validate token first
     bot_info = await service.get_me()
     if not bot_info:
         return False, "Invalid bot token"
-    
+
     # Generate webhook secret
     secret = generate_webhook_secret()
-    
+
     # Set webhook
     webhook_url = f"{base_url}/api/telegram/webhook/{org_id}"
     success = await service.set_webhook(webhook_url, secret)
-    
+
     if success:
         return True, secret
     return False, "Failed to set webhook"

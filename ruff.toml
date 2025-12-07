@@ -1,0 +1,24 @@
+# Ruff configuration for znai.cloud
+line-length = 88
+target-version = "py311"
+
+[lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade (modernize type hints)
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[lint.isort]
+known-first-party = ["backend"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

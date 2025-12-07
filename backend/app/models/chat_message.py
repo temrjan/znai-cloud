@@ -1,9 +1,11 @@
 """Chat message model for conversation history."""
-from datetime import datetime
-from typing import TYPE_CHECKING, Optional, List
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Text, Enum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy.sql import func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
 
@@ -31,8 +33,8 @@ class ChatMessage(Base):
     )
     role: Mapped[MessageRole] = mapped_column(Enum(MessageRole), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    sources: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of source filenames
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    sources: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array of source filenames
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     # Relationships
     session: Mapped["ChatSession"] = relationship("ChatSession", back_populates="messages")

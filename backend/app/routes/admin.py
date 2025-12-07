@@ -1,19 +1,18 @@
 """Admin routes."""
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.database import get_db
-from backend.app.models.user import User, UserStatus, UserRole
-from backend.app.models.organization import Organization
-from backend.app.schemas.user import UserResponse
 from backend.app.middleware.auth import get_current_user
-
+from backend.app.models.organization import Organization
+from backend.app.models.user import User, UserRole, UserStatus
+from backend.app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -26,9 +25,9 @@ class PendingOrganizationResponse(BaseModel):
     slug: str
     status: str
     created_at: datetime
-    owner_id: Optional[int]
-    owner_email: Optional[str]
-    owner_full_name: Optional[str]
+    owner_id: int | None
+    owner_email: str | None
+    owner_full_name: str | None
 
     class Config:
         from_attributes = True
@@ -53,7 +52,7 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
 # PENDING USERS (personal registrations)
 # ============================================================================
 
-@router.get("/users/pending", response_model=List[UserResponse])
+@router.get("/users/pending", response_model=list[UserResponse])
 async def get_pending_users(
     admin: User = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),
@@ -139,7 +138,7 @@ async def reject_user(
 # PENDING ORGANIZATIONS
 # ============================================================================
 
-@router.get("/organizations/pending", response_model=List[PendingOrganizationResponse])
+@router.get("/organizations/pending", response_model=list[PendingOrganizationResponse])
 async def get_pending_organizations(
     admin: User = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),

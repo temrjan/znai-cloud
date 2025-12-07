@@ -4,23 +4,29 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Dict, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.config import settings
 from backend.app.database import get_db
-from backend.app.models.user import User, UserStatus, UserRole
-from backend.app.models.quota import UserQuota
+from backend.app.middleware.auth import get_current_user
 from backend.app.models.organization import Organization, OrganizationStatus
+from backend.app.models.organization_invite import InviteStatus, OrganizationInvite
 from backend.app.models.organization_member import OrganizationMember
 from backend.app.models.organization_settings import OrganizationSettings
-from backend.app.models.organization_invite import OrganizationInvite, InviteStatus
-from backend.app.schemas.user import UserCreate, UserLogin, Token, UserResponse
-from backend.app.utils.security import hash_password, verify_password, create_access_token
-from backend.app.middleware.auth import get_current_user
-from backend.app.config import settings
-from backend.app.services.telegram import notify_new_organization, notify_new_personal_user
-
+from backend.app.models.quota import UserQuota
+from backend.app.models.user import User, UserRole, UserStatus
+from backend.app.schemas.user import Token, UserCreate, UserLogin, UserResponse
+from backend.app.services.telegram import (
+    notify_new_organization,
+    notify_new_personal_user,
+)
+from backend.app.utils.security import (
+    create_access_token,
+    hash_password,
+    verify_password,
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -32,9 +38,9 @@ class RateLimiter:
     def __init__(self, max_requests: int, window_seconds: int):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        self.requests: Dict[str, list] = defaultdict(list)
+        self.requests: dict[str, list] = defaultdict(list)
 
-    def is_allowed(self, key: str) -> Tuple[bool, int]:
+    def is_allowed(self, key: str) -> tuple[bool, int]:
         """Check if request is allowed. Returns (allowed, retry_after_seconds)."""
         now = time.time()
         window_start = now - self.window_seconds

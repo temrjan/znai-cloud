@@ -5,24 +5,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.database import get_db
-from backend.app.models.user import User
 from backend.app.middleware.auth import get_current_user, require_org_admin
-from backend.app.schemas.organization import OrganizationResponse
+from backend.app.models.user import User
 from backend.app.schemas.invite import (
-    InviteCreate,
-    InviteResponse,
-    InviteDetailsResponse,
     InviteAcceptRequest,
+    InviteCreate,
+    InviteDetailsResponse,
+    InviteResponse,
 )
+from backend.app.schemas.organization import OrganizationResponse
 from backend.app.services.invite_service import (
-    InviteService,
-    InviteExpiredError,
     InviteExhaustedError,
+    InviteExpiredError,
     InviteInvalidError,
+    InviteService,
     UserAlreadyInOrganizationError,
 )
 from backend.app.services.organization_service import OrganizationService
-
 
 router = APIRouter(prefix="/organizations", tags=["Invites"])
 
@@ -61,7 +60,7 @@ async def create_invite(
     )
 
 
-@router.get("/my/invites", response_model=List[InviteResponse])
+@router.get("/my/invites", response_model=list[InviteResponse])
 async def list_invites(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),

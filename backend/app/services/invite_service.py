@@ -1,13 +1,13 @@
 """Invite service for organization invitations."""
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import List, Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.organization import Organization, OrganizationStatus
-from backend.app.models.organization_invite import OrganizationInvite, InviteStatus
+from backend.app.models.organization_invite import InviteStatus, OrganizationInvite
 from backend.app.models.organization_member import OrganizationMember
 from backend.app.models.user import User
 
@@ -43,21 +43,21 @@ class InviteService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_code(self, code: str) -> Optional[OrganizationInvite]:
+    async def get_by_code(self, code: str) -> OrganizationInvite | None:
         """Get invite by code."""
         result = await self.db.execute(
             select(OrganizationInvite).where(OrganizationInvite.code == code)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_id(self, invite_id: int) -> Optional[OrganizationInvite]:
+    async def get_by_id(self, invite_id: int) -> OrganizationInvite | None:
         """Get invite by ID."""
         result = await self.db.execute(
             select(OrganizationInvite).where(OrganizationInvite.id == invite_id)
         )
         return result.scalar_one_or_none()
 
-    async def list_by_organization(self, org_id: int) -> List[OrganizationInvite]:
+    async def list_by_organization(self, org_id: int) -> list[OrganizationInvite]:
         """List all invites for organization."""
         result = await self.db.execute(
             select(OrganizationInvite, Organization.name)

@@ -1,20 +1,27 @@
 """Document processing and indexing service using Llama Index with Reranking."""
-from typing import List, Dict, Tuple, Optional
-from pathlib import Path
-import os
 import logging
+import os
 import unicodedata
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
-from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
+from llama_index.core import Document, Settings, StorageContext, VectorStoreIndex
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.core.node_parser import SentenceSplitter
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, Filter, FilterSelector, FieldCondition, MatchValue
-# from sentence_transformers import CrossEncoder  # Disabled - slow on CPU
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    FilterSelector,
+    MatchValue,
+    VectorParams,
+)
 
+# from sentence_transformers import CrossEncoder  # Disabled - slow on CPU
 from backend.app.config import settings
 from backend.app.utils.query_expander import expand_query
 
@@ -22,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 # Chunking parameters by content type
-CHUNK_PARAMS: Dict[str, Dict[str, int]] = {
+CHUNK_PARAMS: dict[str, dict[str, int]] = {
     'legal': {'chunk_size': 1024, 'chunk_overlap': 128},      # Legal documents need more context
     'technical': {'chunk_size': 768, 'chunk_overlap': 100},   # Technical docs - code blocks
     'cooking': {'chunk_size': 384, 'chunk_overlap': 50},      # Recipes are shorter
@@ -66,12 +73,12 @@ class DocumentProcessor:
         self.collection_name = "ai_avangard_documents"
 
         # Initialize reranker (lazy loading)
-        self._reranker: Optional[CrossEncoder] = None
+        self._reranker: Any = None
 
         self._ensure_collection()
 
     @property
-    def reranker(self) -> CrossEncoder:
+    def reranker(self) -> Any:
         """Lazy load reranker model to avoid startup delay."""
         if self._reranker is None:
             logger.info(f"Loading reranker model: {RERANKER_MODEL}")
@@ -91,7 +98,7 @@ class DocumentProcessor:
                 ),
             )
 
-    def _get_chunk_params(self, content_type: str) -> Tuple[int, int]:
+    def _get_chunk_params(self, content_type: str) -> tuple[int, int]:
         """Get chunk size and overlap for content type."""
         params = CHUNK_PARAMS.get(content_type, CHUNK_PARAMS['general'])
         return params['chunk_size'], params['chunk_overlap']
@@ -261,7 +268,7 @@ class DocumentProcessor:
         Uses pg_document_id for new documents, falls back to filename for legacy.
         """
         deleted = False
-        
+
         # Try deleting by pg_document_id first (new documents)
         try:
             result = self.qdrant_client.delete(
@@ -281,7 +288,7 @@ class DocumentProcessor:
             deleted = True
         except Exception as e:
             logger.warning(f"Failed to delete by pg_document_id: {e}")
-        
+
         # Fallback: delete by filename (for legacy documents without pg_document_id)
         if filename:
             # Try both NFC and NFD normalized forms due to Unicode inconsistencies
@@ -305,11 +312,11 @@ class DocumentProcessor:
                     deleted = True
                 except Exception as e:
                     logger.warning(f"Failed to delete by filename ({norm_form}): {e}")
-        
+
         if not deleted:
             logger.warning(f"Could not delete document {document_id} from Qdrant")
 
-    def _rerank_results(self, query: str, results: List[dict], top_n: int = 5) -> List[dict]:
+    def _rerank_results(self, query: str, results: list[dict], top_n: int = 5) -> list[dict]:
         """
         Rerank search results using cross-encoder model.
 
@@ -347,7 +354,7 @@ class DocumentProcessor:
         limit: int,
         score_threshold: float,
         filters: MetadataFilters | None
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Execute a single search query and return results using retriever (no LLM)."""
         # Use retriever directly to avoid LLM calls
         retriever = index.as_retriever(
@@ -381,7 +388,7 @@ class DocumentProcessor:
         search_scope: str = "all",
         use_reranking: bool = True,
         rerank_top_n: int = 5,
-    ) -> List[dict]:
+    ) -> list[dict]:
         """
         Search for relevant chunks using Llama Index with optional reranking.
 

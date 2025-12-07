@@ -2,37 +2,39 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.database import get_db
-from backend.app.models.user import User
 from backend.app.middleware.auth import (
     get_current_user,
-    require_org_member,
     require_org_admin,
+    require_org_member,
     require_org_owner,
 )
+from backend.app.models.user import User
 from backend.app.schemas.organization import (
     OrganizationCreate,
-    OrganizationUpdate,
-    OrganizationResponse,
     OrganizationMemberResponse,
+    OrganizationResponse,
     OrganizationStatsResponse,
+    OrganizationUpdate,
 )
-from backend.app.schemas.settings import OrganizationSettingsResponse, OrganizationSettingsUpdate
-from backend.app.services.organization_service import (
-    OrganizationService,
-    OrganizationNotFoundError,
-    PermissionDeniedError,
+from backend.app.schemas.settings import (
+    OrganizationSettingsResponse,
+    OrganizationSettingsUpdate,
 )
 from backend.app.services.member_service import (
-    MemberService,
-    MemberNotFoundError,
     CannotRemoveOwnerError,
+    MemberNotFoundError,
+    MemberService,
+)
+from backend.app.services.organization_service import (
+    OrganizationNotFoundError,
+    OrganizationService,
+    PermissionDeniedError,
 )
 from backend.app.services.settings_service import SettingsService
-
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
@@ -139,7 +141,7 @@ async def delete_my_organization(
 # MEMBER MANAGEMENT
 # ============================================================================
 
-@router.get("/my/members", response_model=List[OrganizationMemberResponse])
+@router.get("/my/members", response_model=list[OrganizationMemberResponse])
 async def list_organization_members(
     current_user: User = Depends(require_org_member),
     db: AsyncSession = Depends(get_db),
@@ -278,9 +280,14 @@ async def transfer_ownership(
 # TELEGRAM BOT
 # ============================================================================
 
-from backend.app.services.telegram_bot import validate_bot_token, setup_bot_webhook, TelegramBotService
 # TelegramBotSetupRequest and TelegramBotResponse defined below
 from pydantic import BaseModel
+
+from backend.app.services.telegram_bot import (
+    TelegramBotService,
+    setup_bot_webhook,
+    validate_bot_token,
+)
 
 
 class TelegramBotSetupRequest(BaseModel):
@@ -309,7 +316,7 @@ async def setup_telegram_bot(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid bot token. Please check the token and try again."
         )
-    
+
     # Setup webhook
     base_url = "https://znai.cloud"  # TODO: move to config
     success, result = await setup_bot_webhook(
@@ -317,13 +324,13 @@ async def setup_telegram_bot(
         current_user.organization_id,
         base_url
     )
-    
+
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to setup webhook: {result}"
         )
-    
+
     # Save to settings
     service = SettingsService(db)
     settings = await service.update(
@@ -337,9 +344,9 @@ async def setup_telegram_bot(
         current_user.id,
     )
     await db.commit()
-    
+
     webhook_url = f"{base_url}/api/telegram/webhook/{current_user.organization_id}"
-    
+
     return TelegramBotResponse(
         enabled=True,
         bot_username=bot_info.get("username"),
@@ -355,12 +362,12 @@ async def get_telegram_bot_status(
     """Get Telegram bot status for organization."""
     service = SettingsService(db)
     settings = await service.get_by_org_id(current_user.organization_id)
-    
+
     if not settings or not settings.telegram_bot_enabled:
         return TelegramBotResponse(enabled=False)
-    
+
     webhook_url = f"https://znai.cloud/api/telegram/webhook/{current_user.organization_id}"
-    
+
     return TelegramBotResponse(
         enabled=True,
         bot_username=settings.telegram_bot_username,
@@ -376,12 +383,12 @@ async def disable_telegram_bot(
     """Disable Telegram bot for organization."""
     service = SettingsService(db)
     settings = await service.get_by_org_id(current_user.organization_id)
-    
+
     if settings and settings.telegram_bot_token:
         # Delete webhook
         bot = TelegramBotService(settings.telegram_bot_token)
         await bot.delete_webhook()
-        
+
         # Clear settings
         await service.update(
             current_user.organization_id,
@@ -394,5 +401,5 @@ async def disable_telegram_bot(
             current_user.id,
         )
         await db.commit()
-    
+
     return {"message": "Telegram bot disabled"}

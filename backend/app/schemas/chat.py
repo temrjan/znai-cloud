@@ -1,6 +1,7 @@
 """Chat/RAG schemas."""
-from pydantic import BaseModel, Field
 from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
@@ -8,12 +9,12 @@ class ChatRequest(BaseModel):
 
     question: str
     search_scope: str = Field(default="all", pattern="^(all|organization|private)$")
-    session_id: Optional[int] = None  # If provided, use session for conversation history
+    session_id: int | None = None  # If provided, use session for conversation history
 
 
 class ChatResponse(BaseModel):
     """Chat query response."""
 
     answer: str
-    sources: List[str]
-    session_id: Optional[int] = None  # Return session_id if created/used
+    sources: list[str]
+    session_id: int | None = None  # Return session_id if created/used

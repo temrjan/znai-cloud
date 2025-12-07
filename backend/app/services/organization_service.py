@@ -1,16 +1,16 @@
 """Organization service for business logic."""
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
+from backend.app.models.document import Document
 from backend.app.models.organization import Organization, OrganizationStatus
 from backend.app.models.organization_member import OrganizationMember
 from backend.app.models.organization_settings import OrganizationSettings
-from backend.app.models.user import User
-from backend.app.models.document import Document
 from backend.app.models.query_log import QueryLog
+from backend.app.models.user import User
 
 
 class OrganizationNotFoundError(Exception):
@@ -36,14 +36,14 @@ class OrganizationService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_id(self, org_id: int) -> Optional[Organization]:
+    async def get_by_id(self, org_id: int) -> Organization | None:
         """Get organization by ID."""
         result = await self.db.execute(
             select(Organization).where(Organization.id == org_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_slug(self, slug: str) -> Optional[Organization]:
+    async def get_by_slug(self, slug: str) -> Organization | None:
         """Get organization by slug."""
         result = await self.db.execute(
             select(Organization).where(Organization.slug == slug)
@@ -119,7 +119,7 @@ class OrganizationService:
     async def update(
         self,
         organization: Organization,
-        updates: Dict[str, Any]
+        updates: dict[str, Any]
     ) -> Organization:
         """Update organization fields."""
         allowed_fields = ['name', 'max_members', 'max_documents', 'max_queries_org_daily']
@@ -155,7 +155,7 @@ class OrganizationService:
         )
         return result or 0
 
-    async def get_stats(self, org_id: int) -> Dict[str, Any]:
+    async def get_stats(self, org_id: int) -> dict[str, Any]:
         """Get organization statistics."""
         organization = await self.get_by_id(org_id)
         if not organization:

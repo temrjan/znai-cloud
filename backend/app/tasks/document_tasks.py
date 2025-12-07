@@ -3,9 +3,9 @@ import logging
 from pathlib import Path
 
 from backend.app.celery_app import celery_app
-from backend.app.services.document_processor import document_processor
 from backend.app.database import SessionLocal
 from backend.app.models.document import Document, DocumentStatus
+from backend.app.services.document_processor import document_processor
 from backend.app.utils.cache import SearchCache
 
 logger = logging.getLogger(__name__)
@@ -102,13 +102,13 @@ def delete_document_task(self, document_uuid: str, user_id: int = None, organiza
 
     try:
         document_processor.delete_document(document_uuid)
-        
+
         # Invalidate cache
         if user_id:
             SearchCache.invalidate_user(user_id)
         if organization_id:
             SearchCache.invalidate_org(organization_id)
-            
+
         logger.info(f"Document {document_uuid} deleted from index")
         return {"status": "success", "document_uuid": document_uuid}
 

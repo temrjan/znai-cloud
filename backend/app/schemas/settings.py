@@ -1,35 +1,36 @@
 """Organization settings schemas."""
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 
 class OrganizationSettingsUpdate(BaseModel):
     """Schema for updating organization AI settings."""
-    custom_system_prompt: Optional[str] = Field(None, max_length=16000)
-    custom_temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
-    custom_top_p: Optional[float] = Field(None, ge=0.0, le=1.0)
-    custom_max_tokens: Optional[int] = Field(None, ge=100, le=32000)
-    custom_terminology: Optional[Dict[str, str]] = None
+    custom_system_prompt: str | None = Field(None, max_length=16000)
+    custom_temperature: float | None = Field(None, ge=0.0, le=2.0)
+    custom_top_p: float | None = Field(None, ge=0.0, le=1.0)
+    custom_max_tokens: int | None = Field(None, ge=100, le=32000)
+    custom_terminology: dict[str, str] | None = None
 
     # Chunking settings
-    chunk_size: Optional[int] = Field(None, ge=128, le=8192)
-    chunk_overlap: Optional[int] = Field(None, ge=0, le=1000)
+    chunk_size: int | None = Field(None, ge=128, le=8192)
+    chunk_overlap: int | None = Field(None, ge=0, le=1000)
 
     # Search settings
-    search_top_k: Optional[int] = Field(None, ge=1, le=50)
-    search_similarity_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
+    search_top_k: int | None = Field(None, ge=1, le=50)
+    search_similarity_threshold: float | None = Field(None, ge=0.0, le=1.0)
 
     # Response settings
-    response_max_length: Optional[int] = Field(None, ge=100, le=4000)
-    response_language: Optional[str] = Field(None, max_length=10)
-    enable_citations: Optional[bool] = None
-    enable_followup_questions: Optional[bool] = None
+    response_max_length: int | None = Field(None, ge=100, le=4000)
+    response_language: str | None = Field(None, max_length=10)
+    enable_citations: bool | None = None
+    enable_followup_questions: bool | None = None
 
     # Advanced settings
-    reranking_enabled: Optional[bool] = None
-    reranking_top_n: Optional[int] = Field(None, ge=1, le=20)
-    answer_mode: Optional[str] = Field(None, pattern=r'^(concise|detailed|structured)$')
-    context_window_size: Optional[int] = Field(None, ge=1000, le=128000)
+    reranking_enabled: bool | None = None
+    reranking_top_n: int | None = Field(None, ge=1, le=20)
+    answer_mode: str | None = Field(None, pattern=r'^(concise|detailed|structured)$')
+    context_window_size: int | None = Field(None, ge=1000, le=128000)
 
 
 class OrganizationSettingsResponse(BaseModel):
@@ -37,19 +38,19 @@ class OrganizationSettingsResponse(BaseModel):
     organization_id: int
 
     # AI model settings
-    custom_system_prompt: Optional[str] = None
-    custom_temperature: Optional[float] = None
-    custom_max_tokens: Optional[int] = None
-    custom_model: Optional[str] = None
-    custom_terminology: Optional[Dict[str, Any]] = None
+    custom_system_prompt: str | None = None
+    custom_temperature: float | None = None
+    custom_max_tokens: int | None = None
+    custom_model: str | None = None
+    custom_terminology: dict[str, Any] | None = None
 
     # Language settings
-    primary_language: Optional[str] = None
-    response_language: Optional[str] = None  # Alias for primary_language for frontend
+    primary_language: str | None = None
+    response_language: str | None = None  # Alias for primary_language for frontend
 
     # Chunking settings
-    chunk_size: Optional[int] = None
-    chunk_overlap: Optional[int] = None
+    chunk_size: int | None = None
+    chunk_overlap: int | None = None
 
     class Config:
         from_attributes = True
@@ -64,6 +65,6 @@ class PromptTestRequest(BaseModel):
 class PromptTestResponse(BaseModel):
     """Schema for prompt test response."""
     success: bool
-    response_preview: Optional[str]
-    tokens_used: Optional[int]
-    error: Optional[str]
+    response_preview: str | None
+    tokens_used: int | None
+    error: str | None

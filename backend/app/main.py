@@ -6,13 +6,24 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.app.config import settings
-from backend.app.routes import health, auth, documents, chat, quota, admin, organizations, chat_sessions, feedback, invites
-from backend.app.routes import telegram_webhook
+from backend.app.routes import (
+    admin,
+    auth,
+    chat,
+    chat_sessions,
+    documents,
+    feedback,
+    health,
+    invites,
+    organizations,
+    quota,
+    telegram_webhook,
+)
 
 logger = logging.getLogger(__name__)
 

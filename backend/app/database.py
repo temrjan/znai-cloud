@@ -1,13 +1,12 @@
 """Database connection and session management."""
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from backend.app.config import settings
-
 
 # Async engine for FastAPI
 if settings.debug:

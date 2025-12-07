@@ -2,6 +2,7 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 from backend.app.models.organization_invite import InviteStatus
@@ -19,13 +20,13 @@ class InviteResponse(BaseModel):
     id: int
     code: UUID
     organization_id: int
-    organization_name: Optional[str] = None  # Optional - may not be loaded
+    organization_name: str | None = None  # Optional - may not be loaded
     max_uses: int
     used_count: int
     expires_at: datetime
     status: InviteStatus
     default_role: str
-    created_by_user_id: Optional[int] = None
+    created_by_user_id: int | None = None
     created_at: datetime
 
     class Config:
@@ -41,7 +42,7 @@ class InviteDetailsResponse(BaseModel):
     """Schema for public invite details (before accepting)."""
     organization_name: str
     default_role: str = "member"
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     is_valid: bool = False
 
     class Config:

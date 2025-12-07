@@ -1,14 +1,13 @@
 """Health check endpoint."""
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 import redis.asyncio as aioredis
+from fastapi import APIRouter, Depends
 from qdrant_client import QdrantClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.database import get_db
 from backend.app.config import settings
+from backend.app.database import get_db
 from backend.app.schemas.health import HealthResponse
-
 
 router = APIRouter(tags=["Health"])
 
@@ -67,8 +66,9 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 async def prometheus_metrics():
     """Prometheus metrics endpoint."""
     from fastapi.responses import Response
-    from backend.app.utils.metrics import get_metrics, get_content_type
-    
+
+    from backend.app.utils.metrics import get_content_type, get_metrics
+
     return Response(
         content=get_metrics(),
         media_type=get_content_type()

@@ -1,10 +1,15 @@
 """Chat service for LLM interactions (Together AI / OpenAI)."""
 import logging
 import re
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from openai import OpenAI
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from backend.app.config import settings
 from backend.app.utils.metrics import OPENAI_REQUESTS, OPENAI_TOKENS
@@ -82,7 +87,7 @@ class ChatService:
     )
     def generate_response(
         self,
-        messages: List[Dict],
+        messages: list[dict],
         model: str,
         temperature: float,
         max_tokens: int,
@@ -103,10 +108,10 @@ class ChatService:
         self._track_usage(response, model)
         return strip_markdown(response.choices[0].message.content)
 
-    def _call_together(self, messages: List[Dict], temperature: float, max_tokens: int) -> str:
+    def _call_together(self, messages: list[dict], temperature: float, max_tokens: int) -> str:
         """Call Together AI API with Qwen model."""
         model = settings.together_model
-        
+
         response = self.together_client.chat.completions.create(
             model=model,
             messages=messages,
@@ -141,8 +146,8 @@ class ChatService:
 
     def build_context(
         self,
-        search_results: List[Dict],
-        custom_terminology: Optional[Dict] = None,
+        search_results: list[dict],
+        custom_terminology: dict | None = None,
     ) -> str:
         """Build context string from search results."""
         context = "\n\n".join([
@@ -159,10 +164,10 @@ class ChatService:
     def build_messages(
         self,
         system_prompt: str,
-        history_messages: List,
+        history_messages: list,
         question: str,
         context: str,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Build messages array for LLM API."""
         messages = [{"role": "system", "content": system_prompt}]
 

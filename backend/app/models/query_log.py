@@ -2,7 +2,8 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Text
+from sqlalchemy.sql import func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.models.base import Base
@@ -19,15 +20,15 @@ class QueryLog(Base):
         nullable=False,
         index=True
     )
-    organization_id: Mapped[Optional[int]] = mapped_column(
+    organization_id: Mapped[int | None] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
         index=True
     )
 
-    query_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    sources_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    query_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    response_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sources_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     search_mode: Mapped[str] = mapped_column(String(50), default="all", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(

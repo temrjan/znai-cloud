@@ -1,9 +1,9 @@
 """Member service for organization member management."""
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.organization import Organization
 from backend.app.models.organization_member import OrganizationMember
@@ -26,7 +26,7 @@ class MemberService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def list_members(self, org_id: int) -> List[dict]:
+    async def list_members(self, org_id: int) -> list[dict]:
         """
         List all members of organization.
 

@@ -66,7 +66,7 @@ def strip_markdown(text: str) -> str:
 def filter_chinese(text: str) -> str:
     """Remove Chinese characters from text (Qwen sometimes mixes them in)."""
     # Remove Chinese characters (CJK Unified Ideographs range)
-    text = re.sub(r"[u4e00-u9fff]+", "", text)
+    text = re.sub(r"[\u4e00-\u9fff]+", "", text)
     # Clean up extra spaces left after removal
     text = re.sub(r"  +", " ", text)
     return text.strip()

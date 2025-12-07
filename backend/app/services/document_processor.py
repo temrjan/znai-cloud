@@ -1,4 +1,4 @@
-"""Document processing and indexing service using Llama Index with Reranking."""
+"""Document processing and indexing service using Llama Index ."""
 import logging
 import os
 import unicodedata
@@ -21,7 +21,6 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-# from sentence_transformers import CrossEncoder  # Disabled - slow on CPU
 from backend.app.config import settings
 from backend.app.utils.query_expander import expand_query
 
@@ -38,11 +37,10 @@ CHUNK_PARAMS: dict[str, dict[str, int]] = {
 }
 
 # Reranker model - good balance of quality and speed
-RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 class DocumentProcessor:
-    """Process and index documents using Llama Index and Qdrant with Reranking."""
+    """Process and index documents using Llama Index and Qdrant ."""
 
     def __init__(self):
         # Setup OpenAI embedding model
@@ -72,20 +70,10 @@ class DocumentProcessor:
 
         self.collection_name = "ai_avangard_documents"
 
-        # Initialize reranker (lazy loading)
-        self._reranker: Any = None
 
         self._ensure_collection()
 
     @property
-    def reranker(self) -> Any:
-        """Lazy load reranker model to avoid startup delay."""
-        if self._reranker is None:
-            logger.info(f"Loading reranker model: {RERANKER_MODEL}")
-            self._reranker = CrossEncoder(RERANKER_MODEL, max_length=512)
-            logger.info("Reranker model loaded successfully")
-        return self._reranker
-
     def _ensure_collection(self):
         """Create collection if it doesn't exist."""
         collections = self.qdrant_client.get_collections().collections
@@ -316,37 +304,6 @@ class DocumentProcessor:
         if not deleted:
             logger.warning(f"Could not delete document {document_id} from Qdrant")
 
-    def _rerank_results(self, query: str, results: list[dict], top_n: int = 5) -> list[dict]:
-        """
-        Rerank search results using cross-encoder model.
-
-        Args:
-            query: Original search query
-            results: List of search results with 'text' field
-            top_n: Number of top results to return after reranking
-
-        Returns:
-            Reranked and filtered list of results
-        """
-        if not results:
-            return results
-
-        # Prepare query-document pairs for reranking
-        pairs = [(query, r["text"]) for r in results]
-
-        # Get reranking scores
-        rerank_scores = self.reranker.predict(pairs)
-
-        # Add rerank scores to results
-        for i, score in enumerate(rerank_scores):
-            results[i]["rerank_score"] = float(score)
-
-        # Sort by rerank score (higher is better)
-        results.sort(key=lambda x: x["rerank_score"], reverse=True)
-
-        # Return top N results
-        return results[:top_n]
-
     def _execute_search(
         self,
         index: VectorStoreIndex,
@@ -386,11 +343,9 @@ class DocumentProcessor:
         score_threshold: float = 0.35,
         organization_id: int | None = None,
         search_scope: str = "all",
-        use_reranking: bool = True,
-        rerank_top_n: int = 5,
     ) -> list[dict]:
         """
-        Search for relevant chunks using Llama Index with optional reranking.
+        Search for relevant chunks using Llama Index .
 
         Args:
             user_id: User ID for filtering
@@ -399,8 +354,6 @@ class DocumentProcessor:
             score_threshold: Minimum similarity score (0.0-1.0), default 0.5
             organization_id: Organization ID (None for personal mode users)
             search_scope: 'all', 'organization', or 'private'
-            use_reranking: Whether to apply reranking (default True)
-            rerank_top_n: Number of results to return after reranking
 
         Returns list of matching chunks with metadata.
         """
@@ -421,8 +374,7 @@ class DocumentProcessor:
             vector_store=vector_store,
         )
 
-        # For reranking, fetch more initial results (3x the final limit)
-        initial_limit = limit * 3 if use_reranking else limit
+        initial_limit = limit
 
         if search_scope == "organization":
             # Only organization documents
@@ -473,15 +425,9 @@ class DocumentProcessor:
                     unique_results.append(r)
             results = unique_results
 
-        # Apply reranking if enabled
-        if use_reranking and results:
-            logger.info(f"Reranking {len(results)} results for query: {query[:50]}...")
-            results = self._rerank_results(query, results, top_n=rerank_top_n)
-            logger.info(f"Reranking complete. Top score: {results[0].get('rerank_score', 'N/A') if results else 'N/A'}")
-        else:
-            # Sort by original score and limit
-            results.sort(key=lambda x: x["score"], reverse=True)
-            results = results[:limit]
+        # Sort by original score and limit
+        results.sort(key=lambda x: x["score"], reverse=True)
+        results = results[:limit]
 
         return results
 

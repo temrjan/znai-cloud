@@ -127,7 +127,7 @@ def search_documents(user_id: int, question: str, org_id: int | None, search_sco
         score_threshold=0.35,
         organization_id=org_id,
         search_scope=search_scope,
-        use_reranking=True,
+        use_reranking=False,
         rerank_top_n=5,
     )
 

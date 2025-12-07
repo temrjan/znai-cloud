@@ -63,6 +63,14 @@ def strip_markdown(text: str) -> str:
     return text
 
 
+def filter_chinese(text: str) -> str:
+    """Remove Chinese characters from text (Qwen sometimes mixes them in)."""
+    # Remove Chinese characters (CJK Unified Ideographs range)
+    text = re.sub(r"[u4e00-u9fff]+", "", text)
+    # Clean up extra spaces left after removal
+    text = re.sub(r"  +", " ", text)
+    return text.strip()
+
 class ChatService:
     """Service for chat generation using Together AI (primary) or OpenAI (fallback)."""
 
@@ -106,7 +114,7 @@ class ChatService:
         )
 
         self._track_usage(response, model)
-        return strip_markdown(response.choices[0].message.content)
+        return filter_chinese(strip_markdown(response.choices[0].message.content))
 
     def _call_together(self, messages: list[dict], temperature: float, max_tokens: int) -> str:
         """Call Together AI API with Qwen model."""
@@ -130,7 +138,7 @@ class ChatService:
             )
         OPENAI_REQUESTS.labels(model=model, status="success").inc()
 
-        return strip_markdown(response.choices[0].message.content)
+        return filter_chinese(strip_markdown(response.choices[0].message.content))
 
     def _track_usage(self, response, model: str):
         """Track token usage in Prometheus metrics."""

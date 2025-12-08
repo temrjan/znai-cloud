@@ -63,12 +63,50 @@ def strip_markdown(text: str) -> str:
     return text
 
 
-def filter_chinese(text: str) -> str:
-    """Remove Chinese characters from text (Qwen sometimes mixes them in)."""
-    # Remove Chinese characters (CJK Unified Ideographs range)
-    text = re.sub(r"[\u4e00-\u9fff]+", "", text)
-    # Clean up extra spaces left after removal
+def filter_foreign_text(text: str) -> str:
+    """Remove Chinese characters and foreign language sentences from text.
+
+    Qwen3 sometimes mixes in Chinese characters or Spanish/English sentences.
+    This filter removes:
+    1. Chinese/CJK characters
+    2. Lines that are entirely in Latin script (no Cyrillic)
+    """
+    # Remove Chinese/CJK characters (expanded range)
+    text = re.sub(r"[一-鿿㐀-䶿　-〿]+", "", text)
+
+    # Remove lines that are entirely in non-Cyrillic Latin script
+    lines = text.split("
+")
+    filtered_lines = []
+    for line in lines:
+        if not line.strip():
+            filtered_lines.append(line)
+            continue
+
+        # Check if line has any Cyrillic characters
+        has_cyrillic = bool(re.search(r"[Ѐ-ӿ]", line))
+
+        # Count Latin alphabet characters
+        latin_chars = len(re.findall(r"[a-zA-Z]", line))
+
+        # If line has no Cyrillic and more than 10 Latin chars, skip it
+        if not has_cyrillic and latin_chars > 10:
+            continue
+
+        filtered_lines.append(line)
+
+    text = "
+".join(filtered_lines)
+
+    # Clean up extra spaces and newlines
     text = re.sub(r"  +", " ", text)
+    text = re.sub(r"
+
+
++", "
+
+", text)
+
     return text.strip()
 
 class ChatService:
@@ -114,7 +152,7 @@ class ChatService:
         )
 
         self._track_usage(response, model)
-        return filter_chinese(strip_markdown(response.choices[0].message.content))
+        return filter_foreign_text(strip_markdown(response.choices[0].message.content))
 
     def _call_together(self, messages: list[dict], temperature: float, max_tokens: int) -> str:
         """Call Together AI API with Qwen model."""
@@ -138,7 +176,7 @@ class ChatService:
             )
         OPENAI_REQUESTS.labels(model=model, status="success").inc()
 
-        return filter_chinese(strip_markdown(response.choices[0].message.content))
+        return filter_foreign_text(strip_markdown(response.choices[0].message.content))
 
     def _track_usage(self, response, model: str):
         """Track token usage in Prometheus metrics."""

@@ -34,7 +34,7 @@ export function DocumentsPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [visibility, setVisibility] = useState<'private' | 'organization'>('private');
+  const [visibility, setVisibility] = useState<'private' | 'organization'>('organization');
 
   useEffect(() => {
     loadData();

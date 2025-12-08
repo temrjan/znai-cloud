@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-large"
     openai_embedding_dimensions: int = 3072
     openai_llm_model: str = "gpt-4o"
-    openai_max_tokens: int = 1000
+    openai_max_tokens: int = 1500
     openai_temperature: float = 0.3
     openai_timeout: int = 30
 

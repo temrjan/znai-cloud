@@ -28,7 +28,7 @@ export function ChatPage() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [loading, setLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchScope, setSearchScope] = useState<'all' | 'organization' | 'private'>('all');
+  const searchScope = 'all' as const;
   const [activeSessionId, setActiveSessionId] = useState<number | undefined>(undefined);
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
 
@@ -250,51 +250,7 @@ export function ChatPage() {
             paddingBottom: isMobile ? 'calc(16px + env(safe-area-inset-bottom))' : '32px',
           }}
         >
-          {/* Search scope selector */}
-          <Box
-            sx={{
-              maxWidth: '900px',
-              margin: '0 auto',
-              marginBottom: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: isMobile ? '0' : '0 32px',
-            }}
-          >
-            <Box
-              sx={{
-                fontSize: '12px',
-                color: themeColors.text.tertiary,
-              }}
-            >
-              Поиск в:
-            </Box>
-            <Box
-              as="select"
-              value={searchScope}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                setSearchScope(e.target.value as 'all' | 'organization' | 'private')
-              }
-              sx={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                border: `1px solid ${themeColors.border.primary}`,
-                backgroundColor: themeColors.bg.secondary,
-                color: themeColors.text.primary,
-                fontSize: '12px',
-                cursor: 'pointer',
-                outline: 'none',
-                '&:focus': {
-                  borderColor: themeColors.accent.blue,
-                },
-              }}
-            >
-              <option value="all">Все документы</option>
-              <option value="organization">Организация</option>
-              <option value="private">Мои личные</option>
-            </Box>
-          </Box>
+
           <ChatInput
             onSend={handleSend}
             loading={loading}

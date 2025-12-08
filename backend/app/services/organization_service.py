@@ -108,7 +108,7 @@ class OrganizationService:
         # Create default settings
         settings = OrganizationSettings(
             organization_id=organization.id,
-            custom_max_tokens=1000,
+            custom_max_tokens=1500,
             custom_temperature=0.5,
             primary_language="ru"
         )

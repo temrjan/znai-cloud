@@ -18,7 +18,7 @@ class UserQuota(Base):
         primary_key=True
     )
 
-    max_documents: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    max_documents: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     current_documents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     max_queries_daily: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
@@ -26,7 +26,7 @@ class UserQuota(Base):
     last_query_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Personal quota limits
-    personal_max_documents: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    personal_max_documents: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     personal_current_documents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     personal_max_queries_daily: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
 

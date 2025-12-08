@@ -163,7 +163,7 @@ async def register(
             user_id=new_user.id,
             max_documents=settings.free_user_max_documents,
             max_queries_daily=settings.free_user_max_queries_daily,
-            personal_max_documents=5,  # Default personal quota in hybrid mode
+            personal_max_documents=10,  # Default personal quota in hybrid mode
             personal_max_queries_daily=50,
         )
         db.add(quota)
@@ -252,7 +252,7 @@ async def register(
             user_id=new_user.id,
             max_documents=settings.free_user_max_documents,
             max_queries_daily=settings.free_user_max_queries_daily,
-            personal_max_documents=5,
+            personal_max_documents=10,
             personal_max_queries_daily=50,
         )
         db.add(quota)

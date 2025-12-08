@@ -100,7 +100,7 @@ class Settings(BaseSettings):
 
 
     # User Quotas
-    free_user_max_documents: int = 5
+    free_user_max_documents: int = 10
     free_user_max_queries_daily: int = 100
     max_file_size_mb: int = 10
     allowed_extensions: list[str] = [".pdf", ".txt", ".md"]
